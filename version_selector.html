@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document Analyzer - Choose Your Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .container {
+            max-width: 1000px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 3rem;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .header p {
+            font-size: 1.25rem;
+            opacity: 0.9;
+        }
+
+        .versions {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 2rem;
+        }
+
+        .version-card {
+            background: white;
+            border-radius: 20px;
+            padding: 2rem;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .version-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.15);
+        }
+
+        .version-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .version-card.premium::before {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+        }
+
+        .version-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: #333;
+        }
+
+        .version-description {
+            color: #666;
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        .features {
+            list-style: none;
+            margin-bottom: 2rem;
+        }
+
+        .features li {
+            padding: 0.5rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: #555;
+        }
+
+        .features li::before {
+            content: '✓';
+            color: #10b981;
+            font-weight: bold;
+        }
+
+        .version-button {
+            display: block;
+            width: 100%;
+            padding: 1rem 2rem;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: 600;
+            text-align: center;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+        }
+
+        .version-card.premium .version-button {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+        }
+
+        .version-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .badge {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .versions {
+                grid-template-columns: 1fr;
+            }
+            
+            .version-card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Document Analyzer</h1>
+            <p>Choose your preferred interface experience</p>
+        </div>
+
+        <div class="versions">
+            <div class="version-card">
+                <h2 class="version-title">Enhanced Version</h2>
+                <p class="version-description">
+                    Clean, functional interface with all the essential features for document analysis.
+                </p>
+                <ul class="features">
+                    <li>Comprehensive error detection</li>
+                    <li>Spelling & grammar checking</li>
+                    <li>Email validation</li>
+                    <li>Typography analysis</li>
+                    <li>Document structure review</li>
+                    <li>Readability metrics</li>
+                    <li>Corrected text output</li>
+                </ul>
+                <a href="/enhanced" class="version-button">Use Enhanced Version</a>
+            </div>
+
+            <div class="version-card premium">
+                <div class="badge">Recommended</div>
+                <h2 class="version-title">Premium Pro Version</h2>
+                <p class="version-description">
+                    Modern, beautiful interface with advanced features and premium user experience.
+                </p>
+                <ul class="features">
+                    <li>All Enhanced features included</li>
+                    <li>Drag & drop file upload</li>
+                    <li>Dark/light mode toggle</li>
+                    <li>Smooth animations & transitions</li>
+                    <li>Mobile-responsive design</li>
+                    <li>Advanced progress indicators</li>
+                    <li>Export & sharing options</li>
+                    <li>Premium visual design</li>
+                    <li>Interactive error highlighting</li>
+                    <li>Real-time notifications</li>
+                </ul>
+                <a href="/premium" class="version-button">Use Premium Pro Version</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

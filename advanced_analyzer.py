@@ -66,44 +66,60 @@ class AdvancedDocumentAnalyzer:
             'pages': []
         }
         
-        if filename.endswith('.pdf'):
-            with pdfplumber.open(file) as pdf:
-                for i, page in enumerate(pdf.pages):
-                    page_text = page.extract_text()
-                    if page_text:
+        try:
+            if filename.endswith('.pdf'):
+                with pdfplumber.open(file) as pdf:
+                    for i, page in enumerate(pdf.pages):
+                        page_text = page.extract_text()
+                        page_lines = []
+                        page_paragraphs = []
+                        if page_text:
+                            page_lines = [line.strip() for line in page_text.split('\n') if line.strip()]
+                            page_paragraphs = [line for line in page_lines if len(line) > 20]
+                            text_data['raw_text'] += page_text + "\n\n"
+                            text_data['lines'].extend(page_lines)
+                            text_data['paragraphs'].extend(page_paragraphs)
+                        # Always append a page dict, even if no text
                         text_data['pages'].append({
                             'page_num': i + 1,
-                            'text': page_text,
-                            'lines': page_text.split('\n')
+                            'text': page_text if page_text else '',
+                            'lines': page_lines
                         })
-                        text_data['raw_text'] += page_text + "\n\n"
-                        
-                        # Extract paragraphs (non-empty lines)
-                        for line in page_text.split('\n'):
-                            line = line.strip()
-                            if line:
-                                text_data['lines'].append(line)
-                                if len(line) > 20:  # Likely a paragraph
-                                    text_data['paragraphs'].append(line)
-                                    
-        elif filename.endswith('.docx'):
-            doc = docx.Document(file)
-            for para in doc.paragraphs:
-                if para.text.strip():
-                    text_data['paragraphs'].append(para.text)
-                    text_data['lines'].append(para.text)
-            text_data['raw_text'] = "\n".join(text_data['paragraphs'])
+                                        
+            elif filename.endswith('.docx'):
+                doc = docx.Document(file)
+                for para in doc.paragraphs:
+                    if para.text.strip():
+                        text_data['paragraphs'].append(para.text)
+                        text_data['lines'].append(para.text)
+                text_data['raw_text'] = "\n".join(text_data['paragraphs'])
+                
+            else:  # .txt
+                content = file.read().decode('utf-8')
+                text_data['raw_text'] = content
+                text_data['lines'] = content.split('\n')
+                text_data['paragraphs'] = [line for line in text_data['lines'] if len(line.strip()) > 20]
+        
+        except Exception as e:
+            print(f"ERROR in text extraction: {str(e)}")
+            # Return basic text data structure even if extraction fails
             
-        else:  # .txt
-            content = file.read().decode('utf-8')
-            text_data['raw_text'] = content
-            text_data['lines'] = content.split('\n')
-            text_data['paragraphs'] = [line for line in text_data['lines'] if len(line.strip()) > 20]
-            
+        # Ensure all fields are initialized even if extraction fails
+        if text_data.get('lines') is None:
+            text_data['lines'] = []
+        if text_data.get('paragraphs') is None:
+            text_data['paragraphs'] = []
+        if text_data.get('pages') is None:
+            text_data['pages'] = []
+        if text_data.get('raw_text') is None:
+            text_data['raw_text'] = ''
         return text_data
 
     def advanced_spell_check(self, text):
         """Multi-layered spell checking with context awareness"""
+        if not text or not text.strip():
+            return []
+        
         words = re.findall(r'\b\w+\b', text)
         errors = []
         
@@ -170,6 +186,9 @@ class AdvancedDocumentAnalyzer:
 
     def grammar_and_style_check(self, text):
         """Comprehensive grammar and style checking"""
+        if not text or not text.strip():
+            return []
+            
         errors = []
         
         if tool is None:
@@ -198,6 +217,9 @@ class AdvancedDocumentAnalyzer:
 
     def email_validation_check(self, text):
         """Detect email-related issues"""
+        if not text or not text.strip():
+            return []
+            
         errors = []
         
         # Find potential email addresses (including malformed ones)
@@ -260,6 +282,9 @@ class AdvancedDocumentAnalyzer:
 
     def typography_and_formatting_check(self, text_data):
         """Detect typography and formatting issues"""
+        if not text_data or not text_data.get('raw_text'):
+            return []
+            
         errors = []
         text = text_data['raw_text']
         
@@ -329,6 +354,9 @@ class AdvancedDocumentAnalyzer:
 
     def document_structure_analysis(self, text_data):
         """Analyze document structure and detect issues"""
+        if not text_data or not text_data.get('paragraphs'):
+            return []
+            
         errors = []
         
         # Check for very short paragraphs (potential formatting issues)
@@ -367,45 +395,59 @@ class AdvancedDocumentAnalyzer:
 
     def comprehensive_analysis(self, file, filename):
         """Main analysis function combining all checks"""
-        # Extract text with structure
-        text_data = self.extract_text_with_formatting(file, filename)
+        try:
+            # Extract text with structure
+            text_data = self.extract_text_with_formatting(file, filename)
+            
+            if not text_data.get('raw_text', '').strip():
+                # Check if PDF and if any page has images (indicating scanned PDF)
+                if filename.endswith('.pdf'):
+                    try:
+                        file.seek(0)
+                        with pdfplumber.open(file) as pdf:
+                            has_images = any(len(page.images) > 0 for page in pdf.pages)
+                        if has_images:
+                            return {'error': 'No extractable text found. This PDF appears to be image-based (scanned). Try using OCR or upload a text-based PDF.'}
+                    except Exception:
+                        pass
+                return {'error': 'No readable text found in document'}
+            
+            # Perform all analyses
+            spelling_errors = self.advanced_spell_check(text_data['raw_text']) or []
+            grammar_errors = self.grammar_and_style_check(text_data['raw_text']) or []
+            typography_errors = self.typography_and_formatting_check(text_data) or []
+            structure_errors = self.document_structure_analysis(text_data) or []
+            email_errors = self.email_validation_check(text_data['raw_text']) or []
         
-        if not text_data['raw_text'].strip():
-            return {'error': 'No readable text found in document'}
-        
-        # Perform all analyses
-        spelling_errors = self.advanced_spell_check(text_data['raw_text'])
-        grammar_errors = self.grammar_and_style_check(text_data['raw_text'])
-        typography_errors = self.typography_and_formatting_check(text_data)
-        structure_errors = self.document_structure_analysis(text_data)
-        email_errors = self.email_validation_check(text_data['raw_text'])
-        
-        # Calculate readability metrics
-        metrics = self.calculate_advanced_metrics(text_data['raw_text'])
-        
-        # Generate corrected text
-        corrected_text = self.generate_corrected_text(text_data['raw_text'], 
-                                                    spelling_errors, grammar_errors)
-        
-        # Create highlighted text
-        highlighted_text = self.create_highlighted_text(text_data['raw_text'],
-                                                      spelling_errors, grammar_errors, typography_errors, email_errors)
-        
-        return {
-            'text_length': len(text_data['raw_text']),
-            'pages_count': len(text_data['pages']) if text_data['pages'] else 1,
-            'paragraphs_count': len(text_data['paragraphs']),
-            'spelling_errors': spelling_errors,
-            'grammar_errors': grammar_errors,
-            'typography_errors': typography_errors,
-            'structure_errors': structure_errors,
-            'email_errors': email_errors,
-            'total_errors': len(spelling_errors) + len(grammar_errors) + len(typography_errors) + len(structure_errors) + len(email_errors),
-            'metrics': metrics,
-            'corrected_text': corrected_text,
-            'highlighted_text': highlighted_text,
-            'error_summary': self.create_error_summary(spelling_errors, grammar_errors, typography_errors, structure_errors, email_errors)
-        }
+            # Calculate readability metrics
+            metrics = self.calculate_advanced_metrics(text_data['raw_text'])
+            
+            # Generate corrected text
+            corrected_text = self.generate_corrected_text(text_data['raw_text'], 
+                                                        spelling_errors, grammar_errors)
+            
+            # Create highlighted text
+            highlighted_text = self.create_highlighted_text(text_data['raw_text'],
+                                                          spelling_errors, grammar_errors, typography_errors, email_errors)
+            return {
+                'text_length': len(text_data['raw_text']),
+                'pages_count': len(text_data['pages']) if text_data['pages'] else 1,
+                'paragraphs_count': len(text_data['paragraphs']),
+                'spelling_errors': spelling_errors,
+                'grammar_errors': grammar_errors,
+                'typography_errors': typography_errors,
+                'structure_errors': structure_errors,
+                'email_errors': email_errors,
+                'total_errors': len(spelling_errors) + len(grammar_errors) + len(typography_errors) + len(structure_errors) + len(email_errors),
+                'metrics': metrics,
+                'corrected_text': corrected_text,
+                'highlighted_text': highlighted_text,
+                'error_summary': self.create_error_summary(spelling_errors, grammar_errors, typography_errors, structure_errors, email_errors)
+            }
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+            return {'error': f'Analysis failed: {str(e)}'}
     
     # Helper methods
     def is_url_part(self, word):
@@ -522,11 +564,12 @@ class AdvancedDocumentAnalyzer:
         corrected = text
         
         # Apply spelling corrections
-        for error in spelling_errors:
-            if error['suggestions'] and error['confidence'] > 0.7:
-                suggestion = error['suggestions'][0]
-                corrected = re.sub(r'\b' + re.escape(error['word']) + r'\b', 
-                                 suggestion, corrected, count=1)
+        if spelling_errors:
+            for error in spelling_errors:
+                if error['suggestions'] and error['confidence'] > 0.7:
+                    suggestion = error['suggestions'][0]
+                    corrected = re.sub(r'\b' + re.escape(error['word']) + r'\b', 
+                                     suggestion, corrected, count=1)
         
         # Apply grammar corrections (high confidence only)
         if tool is not None:
@@ -541,45 +584,55 @@ class AdvancedDocumentAnalyzer:
         highlighted = text
         
         # Highlight spelling errors
-        for error in spelling_errors:
-            pattern = r'\b' + re.escape(error['word']) + r'\b'
-            replacement = f'<span class="spelling-error" title="Suggestions: {", ".join(error["suggestions"])}">{error["word"]}</span>'
-            highlighted = re.sub(pattern, replacement, highlighted, count=1)
+        if spelling_errors:
+            for error in spelling_errors:
+                pattern = r'\b' + re.escape(error['word']) + r'\b'
+                replacement = f'<span class="spelling-error" title="Suggestions: {", ".join(error["suggestions"])}">{error["word"]}</span>'
+                highlighted = re.sub(pattern, replacement, highlighted, count=1)
         
         # Highlight typography errors
-        for error in typography_errors:
-            if 'text' in error:
-                replacement = f'<span class="typography-error" title="{error["message"]}">{error["text"]}</span>'
-                highlighted = highlighted.replace(error['text'], replacement, 1)
+        if typography_errors:
+            for error in typography_errors:
+                if 'text' in error:
+                    replacement = f'<span class="typography-error" title="{error["message"]}">{error["text"]}</span>'
+                    highlighted = highlighted.replace(error['text'], replacement, 1)
         
         # Highlight email errors
-        for error in email_errors:
-            if 'text' in error:
-                replacement = f'<span class="email-error" title="{error["message"]}">{error["text"]}</span>'
-                highlighted = highlighted.replace(error['text'], replacement, 1)
+        if email_errors:
+            for error in email_errors:
+                if 'text' in error:
+                    replacement = f'<span class="email-error" title="{error["message"]}">{error["text"]}</span>'
+                    highlighted = highlighted.replace(error['text'], replacement, 1)
         
         return highlighted
     
     def create_error_summary(self, spelling_errors, grammar_errors, typography_errors, structure_errors, email_errors):
+        # Ensure all error lists are not None
+        spelling_errors = spelling_errors or []
+        grammar_errors = grammar_errors or []
+        typography_errors = typography_errors or []
+        structure_errors = structure_errors or []
+        email_errors = email_errors or []
+        
         return {
             'spelling': {
                 'count': len(spelling_errors),
-                'high_confidence': len([e for e in spelling_errors if e['confidence'] > 0.8])
+                'high_confidence': len([e for e in spelling_errors if e.get('confidence', 0) > 0.8])
             },
             'grammar': {
                 'count': len(grammar_errors),
-                'high_severity': len([e for e in grammar_errors if e['severity'] == 'high'])
+                'high_severity': len([e for e in grammar_errors if e.get('severity') == 'high'])
             },
             'typography': {
                 'count': len(typography_errors),
-                'formatting': len([e for e in typography_errors if e['type'] == 'formatting'])
+                'formatting': len([e for e in typography_errors if e.get('type') == 'formatting'])
             },
             'structure': {
                 'count': len(structure_errors)
             },
             'email': {
                 'count': len(email_errors),
-                'invalid_format': len([e for e in email_errors if e['subtype'] == 'invalid_format'])
+                'invalid_format': len([e for e in email_errors if e.get('subtype') == 'invalid_format'])
             }
         }
 
@@ -588,6 +641,14 @@ analyzer = AdvancedDocumentAnalyzer()
 
 @app.route('/')
 def index():
+    return send_from_directory('.', 'version_selector.html')
+
+@app.route('/premium')
+def premium():
+    return send_from_directory('.', 'premium_index.html')
+
+@app.route('/enhanced')
+def enhanced():
     return send_from_directory('.', 'enhanced_index.html')
 
 @app.route('/analyze', methods=['POST'])
@@ -611,12 +672,17 @@ def analyze():
         file_bytes = io.BytesIO(uploaded.read())
         result = analyzer.comprehensive_analysis(file_bytes, filename)
         
+        if result is None:
+            return jsonify({'error': 'Analysis returned no result'}), 500
+            
         if 'error' in result:
             return jsonify(result), 400
             
         return jsonify(result)
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': f'Analysis failed: {str(e)}'}), 500
 
 if __name__ == '__main__':

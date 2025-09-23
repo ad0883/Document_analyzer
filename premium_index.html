@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Document Analyzer Pro - AI-Powered Error Detection</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            --warning-gradient: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+            --error-gradient: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+            
+            --bg-primary: #f8fafc;
+            --bg-secondary: #ffffff;
+            --bg-tertiary: #f1f5f9;
+            
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            
+            --border-light: #e2e8f0;
+            --border-medium: #cbd5e1;
+            
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+            
+            --radius-sm: 0.375rem;
+            --radius-md: 0.5rem;
+            --radius-lg: 0.75rem;
+            --radius-xl: 1rem;
+            --radius-2xl: 1.5rem;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-tertiary: #334155;
+            --text-primary: #f8fafc;
+            --text-secondary: #cbd5e1;
+            --text-muted: #64748b;
+            --border-light: #334155;
+            --border-medium: #475569;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            transition: all 0.3s ease;
+        }
+
+        /* Header Styles */
+        .header {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grain" width="100" height="100" patternUnits="userSpaceOnUse"><circle cx="50" cy="50" r="0.5" fill="white" opacity="0.1"/></pattern></defs><rect width="100" height="100" fill="url(%23grain)"/></svg>');
+            opacity: 0.1;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 2rem;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: linear-gradient(45deg, #ffffff, #e2e8f0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: fadeInUp 0.8s ease-out;
+        }
+
+        .header .subtitle {
+            font-size: 1.25rem;
+            font-weight: 400;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+            animation: fadeInUp 0.8s ease-out 0.2s both;
+        }
+
+        .feature-badges {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            flex-wrap: wrap;
+            animation: fadeInUp 0.8s ease-out 0.4s both;
+        }
+
+        .badge {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            padding: 0.5rem 1rem;
+            border-radius: var(--radius-lg);
+            font-size: 0.875rem;
+            font-weight: 500;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1200px;
+            margin: -2rem auto 2rem;
+            padding: 0 1rem;
+            position: relative;
+            z-index: 10;
+        }
+
+        /* Upload Section */
+        .upload-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-xl);
+            padding: 3rem;
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-light);
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border-medium);
+            border-radius: var(--radius-xl);
+            padding: 3rem 2rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            background: var(--bg-tertiary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone.dragover {
+            border-color: #667eea;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+            transform: scale(1.02);
+        }
+
+        .drop-zone-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .upload-icon {
+            width: 4rem;
+            height: 4rem;
+            margin: 0 auto 1.5rem;
+            background: var(--primary-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+            animation: bounce 2s infinite;
+        }
+
+        .drop-zone h3 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .drop-zone p {
+            color: var(--text-secondary);
+            margin-bottom: 2rem;
+            font-size: 1.1rem;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-button {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: var(--radius-lg);
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .file-input-button:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .analyze-btn {
+            background: var(--success-gradient);
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 1rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .analyze-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .analyze-btn:disabled {
+            background: var(--text-muted);
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .file-info {
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background: var(--bg-primary);
+            border-radius: var(--radius-md);
+            border-left: 4px solid #667eea;
+            display: none;
+        }
+
+        .file-info.show {
+            display: block;
+            animation: slideInUp 0.3s ease-out;
+        }
+
+        /* Loading State */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 4rem 2rem;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-2xl);
+            margin-bottom: 2rem;
+            box-shadow: var(--shadow-lg);
+        }
+
+        .loading.show {
+            display: block;
+            animation: slideInUp 0.3s ease-out;
+        }
+
+        .spinner-container {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 2rem;
+        }
+
+        .spinner {
+            width: 80px;
+            height: 80px;
+            border: 4px solid var(--border-light);
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .loading-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .loading-subtitle {
+            color: var(--text-secondary);
+        }
+
+        /* Results Section */
+        .results {
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+            animation: slideInUp 0.5s ease-out;
+        }
+
+        /* Summary Cards */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .summary-card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-xl);
+            padding: 2rem;
+            text-align: center;
+            border: 1px solid var(--border-light);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .summary-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: var(--primary-gradient);
+            transform: scaleX(0);
+            transition: transform 0.3s ease;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-xl);
+        }
+
+        .summary-card:hover::before {
+            transform: scaleX(1);
+        }
+
+        .summary-card .icon {
+            width: 3rem;
+            height: 3rem;
+            margin: 0 auto 1rem;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.25rem;
+            color: white;
+        }
+
+        .summary-card.spelling .icon { background: var(--error-gradient); }
+        .summary-card.grammar .icon { background: var(--warning-gradient); color: var(--text-primary); }
+        .summary-card.typography .icon { background: linear-gradient(135deg, #ffecd2, #fcb69f); color: var(--text-primary); }
+        .summary-card.structure .icon { background: linear-gradient(135deg, #a8edea, #fed6e3); color: var(--text-primary); }
+        .summary-card.email .icon { background: linear-gradient(135deg, #ff9a9e, #fecfef); }
+        .summary-card.metrics .icon { background: var(--success-gradient); }
+
+        .summary-card h3 {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .summary-card .number {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .summary-card .description {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        /* Error Sections */
+        .error-sections {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--border-light);
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .error-section {
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .error-section:last-child {
+            border-bottom: none;
+        }
+
+        .error-header {
+            padding: 1.5rem 2rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--bg-tertiary);
+            position: relative;
+        }
+
+        .error-header:hover {
+            background: var(--bg-primary);
+        }
+
+        .error-header h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .error-badge {
+            background: var(--primary-gradient);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: var(--radius-lg);
+            font-size: 0.875rem;
+            font-weight: 600;
+            min-width: 2rem;
+            text-align: center;
+        }
+
+        .expand-icon {
+            transition: transform 0.3s ease;
+            color: var(--text-secondary);
+        }
+
+        .error-header.active .expand-icon {
+            transform: rotate(180deg);
+        }
+
+        .error-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .error-content.active {
+            max-height: 500px;
+        }
+
+        .error-list {
+            padding: 0 2rem 2rem;
+        }
+
+        .error-item {
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            background: var(--bg-primary);
+            border-radius: var(--radius-lg);
+            border-left: 4px solid #667eea;
+            transition: all 0.3s ease;
+        }
+
+        .error-item:hover {
+            transform: translateX(4px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .error-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .error-word {
+            font-weight: 600;
+            color: #dc3545;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .error-message {
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+            font-style: italic;
+        }
+
+        .error-suggestions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .suggestion {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+            color: #1976d2;
+            padding: 0.375rem 0.75rem;
+            border-radius: var(--radius-md);
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .suggestion:hover {
+            background: #1976d2;
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .context-text {
+            background: var(--bg-tertiary);
+            padding: 1rem;
+            border-radius: var(--radius-md);
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            font-size: 0.875rem;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-light);
+        }
+
+        .no-errors {
+            text-align: center;
+            padding: 3rem;
+            color: #10b981;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .no-errors i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            display: block;
+        }
+
+        /* Text Display Sections */
+        .text-display-section {
+            background: var(--bg-secondary);
+            border-radius: var(--radius-2xl);
+            box-shadow: var(--shadow-lg);
+            margin-bottom: 2rem;
+            border: 1px solid var(--border-light);
+            overflow: hidden;
+        }
+
+        .text-display-header {
+            padding: 1.5rem 2rem;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .text-display-header h3 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .text-content {
+            padding: 2rem;
+            line-height: 1.8;
+            font-size: 1.1rem;
+            max-height: 500px;
+            overflow-y: auto;
+            font-family: 'Georgia', serif;
+        }
+
+        .text-area {
+            width: 100%;
+            min-height: 300px;
+            padding: 2rem;
+            border: 1px solid var(--border-light);
+            border-radius: var(--radius-lg);
+            font-family: 'Georgia', serif;
+            font-size: 1.1rem;
+            line-height: 1.8;
+            resize: vertical;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        .text-area:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Error Highlighting */
+        .spelling-error {
+            background: linear-gradient(135deg, #ffebee, #ffcdd2);
+            border-bottom: 2px wavy #f44336;
+            padding: 2px 4px;
+            border-radius: var(--radius-sm);
+            cursor: help;
+            transition: all 0.3s ease;
+        }
+
+        .spelling-error:hover {
+            background: #f44336;
+            color: white;
+        }
+
+        .grammar-error {
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-bottom: 2px wavy #ff9800;
+            padding: 2px 4px;
+            border-radius: var(--radius-sm);
+            cursor: help;
+            transition: all 0.3s ease;
+        }
+
+        .grammar-error:hover {
+            background: #ff9800;
+            color: white;
+        }
+
+        .typography-error {
+            background: linear-gradient(135deg, #fffde7, #fff9c4);
+            border-bottom: 2px wavy #ffeb3b;
+            padding: 2px 4px;
+            border-radius: var(--radius-sm);
+            cursor: help;
+            transition: all 0.3s ease;
+        }
+
+        .typography-error:hover {
+            background: #ffeb3b;
+            color: var(--text-primary);
+        }
+
+        .email-error {
+            background: linear-gradient(135deg, #fce4ec, #f8bbd9);
+            border-bottom: 2px wavy #e91e63;
+            padding: 2px 4px;
+            border-radius: var(--radius-sm);
+            cursor: help;
+            transition: all 0.3s ease;
+        }
+
+        .email-error:hover {
+            background: #e91e63;
+            color: white;
+        }
+
+        /* Action Buttons */
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        .copy-btn, .download-btn, .share-btn {
+            background: var(--success-gradient);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: var(--radius-lg);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+        }
+
+        .download-btn {
+            background: var(--primary-gradient);
+        }
+
+        .share-btn {
+            background: var(--secondary-gradient);
+        }
+
+        .copy-btn:hover, .download-btn:hover, .share-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Dark Mode Toggle */
+        .theme-toggle {
+            position: fixed;
+            top: 2rem;
+            right: 2rem;
+            z-index: 1000;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-light);
+            border-radius: 50%;
+            width: 3rem;
+            height: 3rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: var(--shadow-md);
+        }
+
+        .theme-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes bounce {
+            0%, 20%, 53%, 80%, 100% {
+                transform: translate3d(0,0,0);
+            }
+            40%, 43% {
+                transform: translate3d(0, -10px, 0);
+            }
+            70% {
+                transform: translate3d(0, -5px, 0);
+            }
+            90% {
+                transform: translate3d(0, -2px, 0);
+            }
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .header .subtitle {
+                font-size: 1rem;
+            }
+            
+            .feature-badges {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .upload-card {
+                padding: 2rem 1rem;
+            }
+            
+            .drop-zone {
+                padding: 2rem 1rem;
+            }
+            
+            .summary-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .analyze-btn {
+                margin-left: 0;
+                margin-top: 1rem;
+                width: 100%;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .error-header {
+                padding: 1rem;
+            }
+            
+            .error-list {
+                padding: 0 1rem 1rem;
+            }
+            
+            .text-display-header,
+            .text-content {
+                padding: 1rem;
+            }
+        }
+
+        /* Metrics Grid */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            padding: 2rem;
+            background: var(--bg-primary);
+            border-radius: var(--radius-xl);
+            margin: 2rem 0;
+        }
+
+        .metric-item {
+            text-align: center;
+            padding: 1.5rem 1rem;
+            background: var(--bg-secondary);
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border-light);
+            transition: all 0.3s ease;
+        }
+
+        .metric-item:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .metric-value {
+            font-size: 2rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-label {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+<body>
+    <!-- Theme Toggle -->
+    <button class="theme-toggle" onclick="toggleTheme()" title="Toggle Dark Mode">
+        <i class="fas fa-moon" id="theme-icon"></i>
+    </button>
+
+    <!-- Version Switch -->
+    <div class="version-switch" style="position: fixed; top: 2rem; left: 2rem; z-index: 1000;">
+        <a href="/" title="Switch Version" style="background: var(--bg-secondary); border: 1px solid var(--border-light); border-radius: 50%; width: 3rem; height: 3rem; display: flex; align-items: center; justify-content: center; text-decoration: none; color: var(--text-primary); box-shadow: var(--shadow-md); transition: all 0.3s ease;">
+            <i class="fas fa-exchange-alt"></i>
+        </a>
+    </div>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <h1><i class="fas fa-search"></i> Document Analyzer Pro</h1>
+            <p class="subtitle">AI-Powered Error Detection & Document Enhancement</p>
+            <div class="feature-badges">
+                <span class="badge"><i class="fas fa-spell-check"></i> Smart Spell Check</span>
+                <span class="badge"><i class="fas fa-envelope"></i> Email Validation</span>
+                <span class="badge"><i class="fas fa-palette"></i> Typography Analysis</span>
+                <span class="badge"><i class="fas fa-chart-line"></i> Readability Metrics</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Upload Section -->
+        <div class="upload-card">
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-zone-content">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <h3>Upload Your Document</h3>
+                    <p>Drag & drop your file here, or click to browse</p>
+                    <div class="file-input-wrapper">
+                        <input type="file" id="fileInput" class="file-input" accept=".pdf,.docx,.txt">
+                        <label for="fileInput" class="file-input-button">
+                            <i class="fas fa-file-upload"></i>
+                            Choose Document
+                        </label>
+                    </div>
+                    <button type="button" id="analyzeBtn" class="analyze-btn" onclick="analyzeDocument()" disabled>
+                        <i class="fas fa-magic"></i>
+                        Analyze Document
+                    </button>
+                </div>
+            </div>
+            <div class="file-info" id="fileInfo">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-file"></i>
+                    <span id="fileName"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading" class="loading">
+            <div class="spinner-container">
+                <div class="spinner"></div>
+            </div>
+            <div class="loading-text">Analyzing Your Document</div>
+            <div class="loading-subtitle">Our AI is performing comprehensive analysis...</div>
+        </div>
+
+        <!-- Results Section -->
+        <div id="results" class="results">
+            <!-- Summary Cards -->
+            <div class="summary-grid">
+                <div class="summary-card spelling">
+                    <div class="icon"><i class="fas fa-spell-check"></i></div>
+                    <h3>Spelling</h3>
+                    <div class="number" id="spellingCount">0</div>
+                    <div class="description" id="spellingDetails">No issues found</div>
+                </div>
+                <div class="summary-card grammar">
+                    <div class="icon"><i class="fas fa-language"></i></div>
+                    <h3>Grammar</h3>
+                    <div class="number" id="grammarCount">0</div>
+                    <div class="description" id="grammarDetails">No issues found</div>
+                </div>
+                <div class="summary-card typography">
+                    <div class="icon"><i class="fas fa-font"></i></div>
+                    <h3>Typography</h3>
+                    <div class="number" id="typographyCount">0</div>
+                    <div class="description" id="typographyDetails">No issues found</div>
+                </div>
+                <div class="summary-card structure">
+                    <div class="icon"><i class="fas fa-sitemap"></i></div>
+                    <h3>Structure</h3>
+                    <div class="number" id="structureCount">0</div>
+                    <div class="description" id="structureDetails">No issues found</div>
+                </div>
+                <div class="summary-card email">
+                    <div class="icon"><i class="fas fa-at"></i></div>
+                    <h3>Email Issues</h3>
+                    <div class="number" id="emailCount">0</div>
+                    <div class="description" id="emailDetails">No issues found</div>
+                </div>
+                <div class="summary-card metrics">
+                    <div class="icon"><i class="fas fa-chart-bar"></i></div>
+                    <h3>Quality Score</h3>
+                    <div class="number" id="documentScore">100</div>
+                    <div class="description" id="scoreDetails">Excellent</div>
+                </div>
+            </div>
+
+            <!-- Error Sections -->
+            <div class="error-sections">
+                <div class="error-section">
+                    <div class="error-header" onclick="toggleSection('spelling')">
+                        <h3><i class="fas fa-spell-check"></i> Spelling Errors</h3>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span class="error-badge" id="spellingBadge">0</span>
+                            <i class="fas fa-chevron-down expand-icon"></i>
+                        </div>
+                    </div>
+                    <div class="error-content" id="spellingContent">
+                        <div class="error-list" id="spellingList"></div>
+                    </div>
+                </div>
+
+                <div class="error-section">
+                    <div class="error-header" onclick="toggleSection('grammar')">
+                        <h3><i class="fas fa-language"></i> Grammar & Style</h3>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span class="error-badge" id="grammarBadge">0</span>
+                            <i class="fas fa-chevron-down expand-icon"></i>
+                        </div>
+                    </div>
+                    <div class="error-content" id="grammarContent">
+                        <div class="error-list" id="grammarList"></div>
+                    </div>
+                </div>
+
+                <div class="error-section">
+                    <div class="error-header" onclick="toggleSection('typography')">
+                        <h3><i class="fas fa-font"></i> Typography & Formatting</h3>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span class="error-badge" id="typographyBadge">0</span>
+                            <i class="fas fa-chevron-down expand-icon"></i>
+                        </div>
+                    </div>
+                    <div class="error-content" id="typographyContent">
+                        <div class="error-list" id="typographyList"></div>
+                    </div>
+                </div>
+
+                <div class="error-section">
+                    <div class="error-header" onclick="toggleSection('structure')">
+                        <h3><i class="fas fa-sitemap"></i> Document Structure</h3>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span class="error-badge" id="structureBadge">0</span>
+                            <i class="fas fa-chevron-down expand-icon"></i>
+                        </div>
+                    </div>
+                    <div class="error-content" id="structureContent">
+                        <div class="error-list" id="structureList"></div>
+                    </div>
+                </div>
+
+                <div class="error-section">
+                    <div class="error-header" onclick="toggleSection('email')">
+                        <h3><i class="fas fa-at"></i> Email Issues</h3>
+                        <div style="display: flex; align-items: center; gap: 1rem;">
+                            <span class="error-badge" id="emailBadge">0</span>
+                            <i class="fas fa-chevron-down expand-icon"></i>
+                        </div>
+                    </div>
+                    <div class="error-content" id="emailContent">
+                        <div class="error-list" id="emailList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Document with Highlights -->
+            <div class="text-display-section">
+                <div class="text-display-header">
+                    <h3><i class="fas fa-highlighter"></i> Document with Highlighted Issues</h3>
+                </div>
+                <div class="text-content" id="highlightedText"></div>
+            </div>
+
+            <!-- Readability Metrics -->
+            <div class="text-display-section">
+                <div class="text-display-header">
+                    <h3><i class="fas fa-chart-line"></i> Readability Metrics</h3>
+                </div>
+                <div class="metrics-grid" id="metricsGrid"></div>
+            </div>
+
+            <!-- Corrected Version -->
+            <div class="text-display-section">
+                <div class="text-display-header">
+                    <h3><i class="fas fa-check-circle"></i> Corrected Version</h3>
+                </div>
+                <div style="padding: 2rem;">
+                    <textarea class="text-area" id="correctedText" readonly></textarea>
+                    <div class="action-buttons">
+                        <button class="copy-btn" onclick="copyText()">
+                            <i class="fas fa-copy"></i> Copy Text
+                        </button>
+                        <button class="download-btn" onclick="downloadText()">
+                            <i class="fas fa-download"></i> Download
+                        </button>
+                        <button class="share-btn" onclick="shareResults()">
+                            <i class="fas fa-share"></i> Share
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let analysisData = null;
+
+        // Theme Toggle
+        function toggleTheme() {
+            const body = document.body;
+            const themeIcon = document.getElementById('theme-icon');
+            
+            if (body.getAttribute('data-theme') === 'dark') {
+                body.removeAttribute('data-theme');
+                themeIcon.className = 'fas fa-moon';
+                localStorage.setItem('theme', 'light');
+            } else {
+                body.setAttribute('data-theme', 'dark');
+                themeIcon.className = 'fas fa-sun';
+                localStorage.setItem('theme', 'dark');
+            }
+        }
+
+        // Load saved theme
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedTheme = localStorage.getItem('theme');
+            if (savedTheme === 'dark') {
+                document.body.setAttribute('data-theme', 'dark');
+                document.getElementById('theme-icon').className = 'fas fa-sun';
+            }
+        });
+
+        // Drag and Drop functionality
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        dropZone.addEventListener('drop', handleDrop, false);
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function highlight(e) {
+            dropZone.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('dragover');
+        }
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            
+            if (files.length > 0) {
+                fileInput.files = files;
+                handleFileSelect(files[0]);
+            }
+        }
+
+        // File input change handler
+        fileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                handleFileSelect(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelect(file) {
+            const fileInfo = document.getElementById('fileInfo');
+            const fileName = document.getElementById('fileName');
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            
+            fileName.textContent = `${file.name} (${formatFileSize(file.size)})`;
+            fileInfo.classList.add('show');
+            analyzeBtn.disabled = false;
+            
+            // Add file type icon
+            const icon = getFileIcon(file.name);
+            fileName.innerHTML = `${icon} ${file.name} (${formatFileSize(file.size)})`;
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function getFileIcon(filename) {
+            const ext = filename.toLowerCase().split('.').pop();
+            switch (ext) {
+                case 'pdf': return '<i class="fas fa-file-pdf" style="color: #dc3545;"></i>';
+                case 'docx': case 'doc': return '<i class="fas fa-file-word" style="color: #007bff;"></i>';
+                case 'txt': return '<i class="fas fa-file-alt" style="color: #6c757d;"></i>';
+                default: return '<i class="fas fa-file"></i>';
+            }
+        }
+
+        // Analysis function
+        async function analyzeDocument() {
+            const fileInput = document.getElementById('fileInput');
+            const loadingDiv = document.getElementById('loading');
+            const resultsDiv = document.getElementById('results');
+            
+            if (!fileInput.files.length) {
+                showAlert('Please select a file first', 'warning');
+                return;
+            }
+
+            // Show loading state
+            loadingDiv.classList.add('show');
+            resultsDiv.classList.remove('show');
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+
+                analysisData = data;
+                displayResults(data);
+                
+            } catch (error) {
+                showAlert(`Error: ${error.message}`, 'error');
+            } finally {
+                loadingDiv.classList.remove('show');
+            }
+        }
+
+        function displayResults(data) {
+            // Update summary cards
+            updateSummaryCard('spelling', data.spelling_errors.length, 
+                data.spelling_errors.length === 0 ? 'Perfect spelling' : `${data.spelling_errors.length} issues found`);
+            updateSummaryCard('grammar', data.grammar_errors.length,
+                data.grammar_errors.length === 0 ? 'Great grammar' : `${data.grammar_errors.length} issues found`);
+            updateSummaryCard('typography', data.typography_errors.length,
+                data.typography_errors.length === 0 ? 'Clean formatting' : `${data.typography_errors.length} issues found`);
+            updateSummaryCard('structure', data.structure_errors.length,
+                data.structure_errors.length === 0 ? 'Well structured' : `${data.structure_errors.length} issues found`);
+            updateSummaryCard('email', data.email_errors.length,
+                data.email_errors.length === 0 ? 'Valid emails' : `${data.email_errors.length} issues found`);
+
+            // Calculate and display document score
+            const totalErrors = data.total_errors;
+            const score = Math.max(0, Math.round(100 - (totalErrors * 2)));
+            const scoreText = score >= 90 ? 'Excellent' : score >= 70 ? 'Good' : score >= 50 ? 'Fair' : 'Needs improvement';
+            updateSummaryCard('metrics', score, scoreText);
+
+            // Update badges
+            updateBadge('spelling', data.spelling_errors.length);
+            updateBadge('grammar', data.grammar_errors.length);
+            updateBadge('typography', data.typography_errors.length);
+            updateBadge('structure', data.structure_errors.length);
+            updateBadge('email', data.email_errors.length);
+
+            // Display error lists
+            displayErrorList('spelling', data.spelling_errors, displaySpellingError);
+            displayErrorList('grammar', data.grammar_errors, displayGrammarError);
+            displayErrorList('typography', data.typography_errors, displayTypographyError);
+            displayErrorList('structure', data.structure_errors, displayStructureError);
+            displayErrorList('email', data.email_errors, displayEmailError);
+
+            // Display other sections
+            displayHighlightedText(data.highlighted_text);
+            displayMetrics(data.metrics);
+            displayCorrectedText(data.corrected_text);
+
+            // Show results with animation
+            setTimeout(() => {
+                document.getElementById('results').classList.add('show');
+                autoExpandFirstErrorSection(data);
+            }, 300);
+        }
+
+        function updateSummaryCard(type, count, description) {
+            const countElem = document.getElementById(`${type}Count`);
+            const detailsElem = document.getElementById(`${type}Details`);
+            if (countElem) countElem.textContent = count;
+            if (detailsElem) detailsElem.textContent = description;
+        }
+
+        function updateBadge(type, count) {
+            const badgeElem = document.getElementById(`${type}Badge`);
+            if (badgeElem) badgeElem.textContent = count;
+        }
+
+        function displayErrorList(type, errors, displayFunction) {
+            const list = document.getElementById(`${type}List`);
+            if (errors.length === 0) {
+                list.innerHTML = `
+                    <div class="no-errors">
+                        <i class="fas fa-check-circle"></i>
+                        No ${type} errors found!
+                    </div>
+                `;
+                return;
+            }
+            list.innerHTML = errors.map(displayFunction).join('');
+        }
+
+        function displaySpellingError(error) {
+            return `
+                <div class="error-item">
+                    <div class="error-word">${error.word}</div>
+                    <div class="error-message">Confidence: ${Math.round(error.confidence * 100)}%</div>
+                    <div class="error-suggestions">
+                        ${error.suggestions.map(s => `<span class="suggestion">${s}</span>`).join('')}
+                    </div>
+                    ${error.context ? `<div class="context-text">"${error.context}"</div>` : ''}
+                </div>
+            `;
+        }
+
+        function displayGrammarError(error) {
+            return `
+                <div class="error-item">
+                    <div class="error-word">${error.category}</div>
+                    <div class="error-message">${error.message}</div>
+                    ${error.suggestions.length > 0 ? `
+                        <div class="error-suggestions">
+                            ${error.suggestions.map(s => `<span class="suggestion">${s}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                    <div class="context-text">"${error.context}"</div>
+                </div>
+            `;
+        }
+
+        function displayTypographyError(error) {
+            return `
+                <div class="error-item">
+                    <div class="error-word">${error.subtype.replace('_', ' ').toUpperCase()}</div>
+                    <div class="error-message">${error.message}</div>
+                    ${error.text ? `<div class="context-text">Found: "${error.text}"</div>` : ''}
+                    ${error.suggestion ? `<div class="error-suggestions"><span class="suggestion">${error.suggestion}</span></div>` : ''}
+                </div>
+            `;
+        }
+
+        function displayStructureError(error) {
+            return `
+                <div class="error-item">
+                    <div class="error-word">${error.subtype.replace('_', ' ').toUpperCase()}</div>
+                    <div class="error-message">${error.message}</div>
+                    ${error.text ? `<div class="context-text">"${error.text}"</div>` : ''}
+                    ${error.suggestion ? `<div class="error-suggestions"><span class="suggestion">${error.suggestion}</span></div>` : ''}
+                </div>
+            `;
+        }
+
+        function displayEmailError(error) {
+            return `
+                <div class="error-item">
+                    <div class="error-word">${error.subtype.replace('_', ' ').toUpperCase()}</div>
+                    <div class="error-message">${error.message}</div>
+                    ${error.text ? `<div class="context-text">Found: "${error.text}"</div>` : ''}
+                    ${error.suggestion ? `<div class="error-suggestions"><span class="suggestion">${error.suggestion}</span></div>` : ''}
+                </div>
+            `;
+        }
+
+        function displayHighlightedText(text) {
+            document.getElementById('highlightedText').innerHTML = text.replace(/\n/g, '<br>');
+        }
+
+        function displayMetrics(metrics) {
+            const grid = document.getElementById('metricsGrid');
+            grid.innerHTML = `
+                <div class="metric-item">
+                    <div class="metric-value">${metrics.word_count}</div>
+                    <div class="metric-label">Words</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">${metrics.sentence_count}</div>
+                    <div class="metric-label">Sentences</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">${metrics.avg_words_per_sentence}</div>
+                    <div class="metric-label">Avg Words/Sentence</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">${Math.round(metrics.flesch_reading_ease)}</div>
+                    <div class="metric-label">Reading Ease</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">${Math.round(metrics.flesch_kincaid_grade)}</div>
+                    <div class="metric-label">Grade Level</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">${Math.round(metrics.automated_readability_index)}</div>
+                    <div class="metric-label">Readability Index</div>
+                </div>
+            `;
+        }
+
+        function displayCorrectedText(text) {
+            document.getElementById('correctedText').value = text;
+        }
+
+        function toggleSection(section) {
+            const content = document.getElementById(section + 'Content');
+            const header = content.previousElementSibling;
+            
+            content.classList.toggle('active');
+            header.classList.toggle('active');
+        }
+
+        function autoExpandFirstErrorSection(data) {
+            const sections = ['spelling', 'grammar', 'typography', 'structure', 'email'];
+            for (let section of sections) {
+                if (data[section + '_errors'].length > 0) {
+                    toggleSection(section);
+                    break;
+                }
+            }
+        }
+
+        // Action functions
+        function copyText() {
+            const textArea = document.getElementById('correctedText');
+            textArea.select();
+            document.execCommand('copy');
+            
+            showAlert('Text copied to clipboard!', 'success');
+        }
+
+        function downloadText() {
+            const text = document.getElementById('correctedText').value;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'corrected_document.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            showAlert('Document downloaded!', 'success');
+        }
+
+        function shareResults() {
+            if (navigator.share && analysisData) {
+                const totalErrors = analysisData.total_errors;
+                const score = Math.max(0, Math.round(100 - (totalErrors * 2)));
+                
+                navigator.share({
+                    title: 'Document Analysis Results',
+                    text: `My document scored ${score}/100 with ${totalErrors} issues found using Document Analyzer Pro!`,
+                    url: window.location.href
+                });
+            } else {
+                showAlert('Sharing not supported on this device', 'info');
+            }
+        }
+
+        // Alert system
+        function showAlert(message, type = 'info') {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.innerHTML = `
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : type === 'warning' ? 'exclamation-triangle' : 'info-circle'}"></i>
+                ${message}
+            `;
+            
+            // Add alert styles if not already present
+            if (!document.querySelector('.alert-styles')) {
+                const style = document.createElement('style');
+                style.className = 'alert-styles';
+                style.textContent = `
+                    .alert {
+                        position: fixed;
+                        top: 2rem;
+                        right: 2rem;
+                        z-index: 10000;
+                        padding: 1rem 1.5rem;
+                        border-radius: var(--radius-lg);
+                        color: white;
+                        font-weight: 600;
+                        display: flex;
+                        align-items: center;
+                        gap: 0.5rem;
+                        box-shadow: var(--shadow-lg);
+                        animation: slideInRight 0.3s ease-out;
+                        max-width: 300px;
+                    }
+                    .alert-success { background: linear-gradient(135deg, #10b981, #059669); }
+                    .alert-error { background: linear-gradient(135deg, #ef4444, #dc2626); }
+                    .alert-warning { background: linear-gradient(135deg, #f59e0b, #d97706); }
+                    .alert-info { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+                    @keyframes slideInRight {
+                        from { transform: translateX(100%); opacity: 0; }
+                        to { transform: translateX(0); opacity: 1; }
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            document.body.appendChild(alertDiv);
+            
+            setTimeout(() => {
+                alertDiv.style.animation = 'slideInRight 0.3s ease-out reverse';
+                setTimeout(() => {
+                    if (alertDiv.parentNode) {
+                        alertDiv.parentNode.removeChild(alertDiv);
+                    }
+                }, 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
