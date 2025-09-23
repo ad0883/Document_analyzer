@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Document Analyzer - Perfect Error Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .upload-section {
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .file-input-button {
+            display: inline-block;
+            padding: 15px 30px;
+            background: #28a745;
+            color: white;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1.1em;
+        }
+
+        .file-input-button:hover {
+            background: #218838;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .analyze-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 1.1em;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-left: 20px;
+        }
+
+        .analyze-btn:hover:not(:disabled) {
+            background: #0056b3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.3);
+        }
+
+        .analyze-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .results {
+            display: none;
+            padding: 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #6c757d;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #007bff;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .summary-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .summary-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .summary-card h3 {
+            color: #343a40;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+
+        .summary-card .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .spelling .number { color: #dc3545; }
+        .grammar .number { color: #fd7e14; }
+        .typography .number { color: #ffc107; }
+        .structure .number { color: #6f42c1; }
+        .email .number { color: #e91e63; }
+        .metrics .number { color: #20c997; }
+
+        .error-sections {
+            padding: 0;
+        }
+
+        .error-section {
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .error-header {
+            background: #f8f9fa;
+            padding: 20px 30px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .error-header:hover {
+            background: #e9ecef;
+        }
+
+        .error-header h3 {
+            color: #343a40;
+            font-size: 1.3em;
+        }
+
+        .error-badge {
+            background: #dc3545;
+            color: white;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.9em;
+        }
+
+        .error-content {
+            display: none;
+            padding: 0;
+        }
+
+        .error-content.active {
+            display: block;
+        }
+
+        .error-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .error-item {
+            padding: 20px 30px;
+            border-bottom: 1px solid #f1f3f4;
+            transition: background 0.3s ease;
+        }
+
+        .error-item:hover {
+            background: #f8f9fa;
+        }
+
+        .error-item:last-child {
+            border-bottom: none;
+        }
+
+        .error-word {
+            font-weight: bold;
+            color: #dc3545;
+            font-size: 1.1em;
+        }
+
+        .error-message {
+            color: #6c757d;
+            margin: 8px 0;
+            font-style: italic;
+        }
+
+        .error-suggestions {
+            margin-top: 10px;
+        }
+
+        .suggestion {
+            display: inline-block;
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 4px 10px;
+            margin: 2px 5px 2px 0;
+            border-radius: 15px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .suggestion:hover {
+            background: #1976d2;
+            color: white;
+        }
+
+        .context-text {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            color: #495057;
+            margin-top: 10px;
+        }
+
+        .highlighted-text {
+            padding: 30px;
+            background: white;
+        }
+
+        .highlighted-text h3 {
+            margin-bottom: 20px;
+            color: #343a40;
+        }
+
+        .text-content {
+            line-height: 1.8;
+            font-size: 1.05em;
+            max-height: 500px;
+            overflow-y: auto;
+            border: 1px solid #e9ecef;
+            padding: 20px;
+            border-radius: 8px;
+            background: #fefefe;
+        }
+
+        .spelling-error {
+            background-color: #ffebee;
+            border-bottom: 2px wavy #f44336;
+            padding: 2px 4px;
+            border-radius: 3px;
+            cursor: help;
+        }
+
+        .grammar-error {
+            background-color: #fff3e0;
+            border-bottom: 2px wavy #ff9800;
+            padding: 2px 4px;
+            border-radius: 3px;
+            cursor: help;
+        }
+
+        .typography-error {
+            background-color: #fffde7;
+            border-bottom: 2px wavy #ffeb3b;
+            padding: 2px 4px;
+            border-radius: 3px;
+            cursor: help;
+        }
+
+        .email-error {
+            background-color: #fce4ec;
+            border-bottom: 2px wavy #e91e63;
+            padding: 2px 4px;
+            border-radius: 3px;
+            cursor: help;
+        }
+
+        .corrected-text {
+            padding: 30px;
+            background: #f8f9fa;
+        }
+
+        .corrected-text h3 {
+            margin-bottom: 20px;
+            color: #343a40;
+        }
+
+        .text-area {
+            width: 100%;
+            min-height: 300px;
+            padding: 20px;
+            border: 1px solid #ced4da;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 1em;
+            line-height: 1.6;
+            resize: vertical;
+        }
+
+        .copy-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .copy-btn:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+
+        .error-alert {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 30px;
+        }
+
+        .no-errors {
+            text-align: center;
+            padding: 40px;
+            color: #28a745;
+            font-size: 1.2em;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            padding: 30px;
+            background: white;
+        }
+
+        .metric-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .metric-value {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .metric-label {
+            color: #6c757d;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                margin: 10px;
+                border-radius: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+            
+            .upload-section {
+                padding: 20px;
+            }
+            
+            .summary-cards {
+                grid-template-columns: 1fr;
+                padding: 20px;
+                gap: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 Advanced Document Analyzer</h1>
+            <p>Perfect detection of spelling, grammar, typography, and structural errors</p>
+        </div>
+
+        <div class="upload-section">
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" class="file-input" accept=".pdf,.docx,.txt">
+                <label for="fileInput" class="file-input-button">
+                    📄 Choose Document
+                </label>
+            </div>
+            <button id="analyzeBtn" class="analyze-btn" onclick="analyzeDocument()" disabled>
+                🚀 Analyze Document
+            </button>
+            <div id="fileName" style="margin-top: 15px; color: #6c757d;"></div>
+        </div>
+
+        <div id="loading" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Performing comprehensive analysis...</p>
+        </div>
+
+        <div id="results" class="results">
+            <div class="summary-cards">
+                <div class="summary-card spelling">
+                    <h3>Spelling Errors</h3>
+                    <div class="number" id="spellingCount">0</div>
+                    <p id="spellingDetails">No issues found</p>
+                </div>
+                <div class="summary-card grammar">
+                    <h3>Grammar & Style</h3>
+                    <div class="number" id="grammarCount">0</div>
+                    <p id="grammarDetails">No issues found</p>
+                </div>
+                <div class="summary-card typography">
+                    <h3>Typography</h3>
+                    <div class="number" id="typographyCount">0</div>
+                    <p id="typographyDetails">No issues found</p>
+                </div>
+                <div class="summary-card structure">
+                    <h3>Structure</h3>
+                    <div class="number" id="structureCount">0</div>
+                    <p id="structureDetails">No issues found</p>
+                </div>
+                <div class="summary-card email">
+                    <h3>Email Issues</h3>
+                    <div class="number" id="emailCount">0</div>
+                    <p id="emailDetails">No issues found</p>
+                </div>
+                <div class="summary-card metrics">
+                    <h3>Document Score</h3>
+                    <div class="number" id="documentScore">100</div>
+                    <p id="scoreDetails">Excellent quality</p>
+                </div>
+            </div>
+
+            <div class="error-sections">
+                <div class="error-section">
+                    <div class="error-header" onclick="toggleSection('spelling')">
+                        <h3>🔤 Spelling Errors</h3>
+                        <span class="error-badge" id="spellingBadge">0</span>
+                    </div>
+                    <div class="error-content" id="spellingContent">
+                        <div class="error-list" id="spellingList"></div>
+                    </div>
+                </div>
+
+                <div class="error-section">
+                    <div class="error-header" onclick="toggleSection('grammar')">
+                        <h3>📝 Grammar & Style Issues</h3>
+                        <span class="error-badge" id="grammarBadge">0</span>
+                    </div>
+                    <div class="error-content" id="grammarContent">
+                        <div class="error-list" id="grammarList"></div>
+                    </div>
+                </div>
+
+                <div class="error-section">
+                    <div class="error-header" onclick="toggleSection('typography')">
+                        <h3>🎨 Typography & Formatting</h3>
+                        <span class="error-badge" id="typographyBadge">0</span>
+                    </div>
+                    <div class="error-content" id="typographyContent">
+                        <div class="error-list" id="typographyList"></div>
+                    </div>
+                </div>
+
+                <div class="error-section">
+                    <div class="error-header" onclick="toggleSection('structure')">
+                        <h3>🏗️ Document Structure</h3>
+                        <span class="error-badge" id="structureBadge">0</span>
+                    </div>
+                    <div class="error-content" id="structureContent">
+                        <div class="error-list" id="structureList"></div>
+                    </div>
+                </div>
+
+                <div class="error-section">
+                    <div class="error-header" onclick="toggleSection('email')">
+                        <h3>📧 Email Issues</h3>
+                        <span class="error-badge" id="emailBadge">0</span>
+                    </div>
+                    <div class="error-content" id="emailContent">
+                        <div class="error-list" id="emailList"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="highlighted-text">
+                <h3>📋 Document with Highlighted Issues</h3>
+                <div class="text-content" id="highlightedText"></div>
+            </div>
+
+            <div class="metrics-grid" id="metricsGrid"></div>
+
+            <div class="corrected-text">
+                <h3>✅ Corrected Version</h3>
+                <textarea class="text-area" id="correctedText" readonly></textarea>
+                <button class="copy-btn" onclick="copyText()">📋 Copy Corrected Text</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let analysisData = null;
+
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            const analyzeBtn = document.getElementById('analyzeBtn');
+            const fileName = document.getElementById('fileName');
+            
+            if (file) {
+                fileName.textContent = `Selected: ${file.name}`;
+                analyzeBtn.disabled = false;
+            } else {
+                fileName.textContent = '';
+                analyzeBtn.disabled = true;
+            }
+        });
+
+        async function analyzeDocument() {
+            const fileInput = document.getElementById('fileInput');
+            const loadingDiv = document.getElementById('loading');
+            const resultsDiv = document.getElementById('results');
+            
+            if (!fileInput.files.length) {
+                alert('Please select a file first');
+                return;
+            }
+
+            loadingDiv.style.display = 'block';
+            resultsDiv.style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Analysis failed');
+                }
+
+                analysisData = data;
+                displayResults(data);
+                
+            } catch (error) {
+                alert(`Error: ${error.message}`);
+            } finally {
+                loadingDiv.style.display = 'none';
+            }
+        }
+
+        function displayResults(data) {
+            // Update summary cards
+            document.getElementById('spellingCount').textContent = data.spelling_errors.length;
+            document.getElementById('grammarCount').textContent = data.grammar_errors.length;
+            document.getElementById('typographyCount').textContent = data.typography_errors.length;
+            document.getElementById('structureCount').textContent = data.structure_errors.length;
+            document.getElementById('emailCount').textContent = data.email_errors.length;
+
+            // Calculate document score
+            const totalErrors = data.total_errors;
+            const score = Math.max(0, Math.round(100 - (totalErrors * 2)));
+            document.getElementById('documentScore').textContent = score;
+            
+            const scoreText = score >= 90 ? 'Excellent' : score >= 70 ? 'Good' : score >= 50 ? 'Fair' : 'Needs improvement';
+            document.getElementById('scoreDetails').textContent = scoreText;
+
+            // Update badges
+            document.getElementById('spellingBadge').textContent = data.spelling_errors.length;
+            document.getElementById('grammarBadge').textContent = data.grammar_errors.length;
+            document.getElementById('typographyBadge').textContent = data.typography_errors.length;
+            document.getElementById('structureBadge').textContent = data.structure_errors.length;
+            document.getElementById('emailBadge').textContent = data.email_errors.length;
+
+            // Display error lists
+            displaySpellingErrors(data.spelling_errors);
+            displayGrammarErrors(data.grammar_errors);
+            displayTypographyErrors(data.typography_errors);
+            displayStructureErrors(data.structure_errors);
+            displayEmailErrors(data.email_errors);
+
+            // Display highlighted text
+            document.getElementById('highlightedText').innerHTML = data.highlighted_text.replace(/\n/g, '<br>');
+
+            // Display metrics
+            displayMetrics(data.metrics);
+
+            // Display corrected text
+            document.getElementById('correctedText').value = data.corrected_text;
+
+            // Show results
+            document.getElementById('results').style.display = 'block';
+        }
+
+        function displaySpellingErrors(errors) {
+            const list = document.getElementById('spellingList');
+            if (errors.length === 0) {
+                list.innerHTML = '<div class="no-errors">✅ No spelling errors found!</div>';
+                return;
+            }
+
+            list.innerHTML = errors.map(error => `
+                <div class="error-item">
+                    <div class="error-word">${error.word}</div>
+                    <div class="error-message">Confidence: ${Math.round(error.confidence * 100)}%</div>
+                    <div class="error-suggestions">
+                        ${error.suggestions.map(s => `<span class="suggestion">${s}</span>`).join('')}
+                    </div>
+                    ${error.context ? `<div class="context-text">"${error.context}"</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function displayGrammarErrors(errors) {
+            const list = document.getElementById('grammarList');
+            if (errors.length === 0) {
+                list.innerHTML = '<div class="no-errors">✅ No grammar errors found!</div>';
+                return;
+            }
+
+            list.innerHTML = errors.map(error => `
+                <div class="error-item">
+                    <div class="error-word">${error.category}</div>
+                    <div class="error-message">${error.message}</div>
+                    ${error.suggestions.length > 0 ? `
+                        <div class="error-suggestions">
+                            ${error.suggestions.map(s => `<span class="suggestion">${s}</span>`).join('')}
+                        </div>
+                    ` : ''}
+                    <div class="context-text">"${error.context}"</div>
+                </div>
+            `).join('');
+        }
+
+        function displayTypographyErrors(errors) {
+            const list = document.getElementById('typographyList');
+            if (errors.length === 0) {
+                list.innerHTML = '<div class="no-errors">✅ No typography errors found!</div>';
+                return;
+            }
+
+            list.innerHTML = errors.map(error => `
+                <div class="error-item">
+                    <div class="error-word">${error.subtype.replace('_', ' ').toUpperCase()}</div>
+                    <div class="error-message">${error.message}</div>
+                    ${error.text ? `<div class="context-text">Found: "${error.text}"</div>` : ''}
+                    ${error.suggestion ? `<div class="error-suggestions"><span class="suggestion">${error.suggestion}</span></div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function displayStructureErrors(errors) {
+            const list = document.getElementById('structureList');
+            if (errors.length === 0) {
+                list.innerHTML = '<div class="no-errors">✅ No structure errors found!</div>';
+                return;
+            }
+
+            list.innerHTML = errors.map(error => `
+                <div class="error-item">
+                    <div class="error-word">${error.subtype.replace('_', ' ').toUpperCase()}</div>
+                    <div class="error-message">${error.message}</div>
+                    ${error.text ? `<div class="context-text">"${error.text}"</div>` : ''}
+                    ${error.suggestion ? `<div class="error-suggestions"><span class="suggestion">${error.suggestion}</span></div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function displayEmailErrors(errors) {
+            const list = document.getElementById('emailList');
+            if (errors.length === 0) {
+                list.innerHTML = '<div class="no-errors">✅ No email errors found!</div>';
+                return;
+            }
+
+            list.innerHTML = errors.map(error => `
+                <div class="error-item">
+                    <div class="error-word">${error.subtype.replace('_', ' ').toUpperCase()}</div>
+                    <div class="error-message">${error.message}</div>
+                    ${error.text ? `<div class="context-text">Found: "${error.text}"</div>` : ''}
+                    ${error.suggestion ? `<div class="error-suggestions"><span class="suggestion">${error.suggestion}</span></div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function displayMetrics(metrics) {
+            const grid = document.getElementById('metricsGrid');
+            grid.innerHTML = `
+                <div class="metric-item">
+                    <div class="metric-value">${metrics.word_count}</div>
+                    <div class="metric-label">Words</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">${metrics.sentence_count}</div>
+                    <div class="metric-label">Sentences</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">${metrics.avg_words_per_sentence}</div>
+                    <div class="metric-label">Avg Words/Sentence</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">${Math.round(metrics.flesch_reading_ease)}</div>
+                    <div class="metric-label">Reading Ease</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">${Math.round(metrics.flesch_kincaid_grade)}</div>
+                    <div class="metric-label">Grade Level</div>
+                </div>
+                <div class="metric-item">
+                    <div class="metric-value">${Math.round(metrics.automated_readability_index)}</div>
+                    <div class="metric-label">Readability Index</div>
+                </div>
+            `;
+        }
+
+        function toggleSection(section) {
+            const content = document.getElementById(section + 'Content');
+            content.classList.toggle('active');
+        }
+
+        function copyText() {
+            const textArea = document.getElementById('correctedText');
+            textArea.select();
+            document.execCommand('copy');
+            
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.textContent = '✅ Copied!';
+            btn.style.background = '#28a745';
+            
+            setTimeout(() => {
+                btn.textContent = originalText;
+                btn.style.background = '#28a745';
+            }, 2000);
+        }
+
+        // Auto-expand first error section if there are errors
+        setTimeout(() => {
+            if (analysisData && analysisData.total_errors > 0) {
+                const sections = ['spelling', 'grammar', 'typography', 'structure', 'email'];
+                for (let section of sections) {
+                    if (analysisData[section + '_errors'].length > 0) {
+                        toggleSection(section);
+                        break;
+                    }
+                }
+            }
+        }, 500);
+    </script>
+</body>
+</html>
