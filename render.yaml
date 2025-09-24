@@ -1,17 +1,19 @@
 services:
   - type: web
     name: document-analyzer
-    env: docker
-    dockerfilePath: ./Dockerfile
+    env: python
     plan: starter
     region: oregon
     branch: main
+    buildCommand: |
+      pip install --upgrade pip
+      pip install -r requirements.txt
+      python -c "import nltk; nltk.download('punkt'); nltk.download('words')"
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 advanced_analyzer:app
     healthCheckPath: /
     envVars:
       - key: PYTHON_VERSION
         value: 3.9.6
-      - key: PORT
-        value: 8080
       - key: FLASK_ENV
         value: production
     scaling:
