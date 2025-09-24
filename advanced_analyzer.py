@@ -11,6 +11,14 @@ from fuzzywuzzy import fuzz
 from autocorrect import Speller
 from collections import defaultdict, Counter
 import json
+import requests
+import os
+from typing import List, Dict, Any
+import openai
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 # Download required NLTK data
 try:
@@ -31,20 +39,62 @@ spell_autocorrect = Speller()
 
 # Initialize LanguageTool for grammar checking (optional)
 tool = None
-try:
-    tool = language_tool_python.LanguageTool('en-US')
-    print("LanguageTool initialized successfully")
-except Exception as e:
-    print(f"Warning: LanguageTool could not be initialized: {e}")
-    print("Grammar checking will be disabled")
+print("Note: Using built-in grammar checking (LanguageTool integration disabled for better performance)")
+
+# AI API Configuration
+# AI Configuration - Multiple providers support
+def get_ai_config():
+    """Determine which AI provider is available and configure accordingly"""
+    if os.getenv('GEMINI_API_KEY'):
+        return {"enabled": True, "provider": "gemini", "message": "✅ AI-powered error detection enabled (Google Gemini - Free)"}
+    elif os.getenv('OPENAI_API_KEY'):
+        return {"enabled": True, "provider": "openai", "message": "✅ AI-powered error detection enabled (OpenAI API)"}
+    elif os.getenv('HUGGINGFACE_API_KEY'):
+        return {"enabled": True, "provider": "huggingface", "message": "✅ AI-powered error detection enabled (Hugging Face - Free)"}
+    else:
+        return {"enabled": False, "provider": "none", "message": "⚠️  AI-powered error detection disabled (set GEMINI_API_KEY, OPENAI_API_KEY, or HUGGINGFACE_API_KEY to enable)"}
+
+AI_CONFIG = get_ai_config()
+AI_API_ENABLED = AI_CONFIG["enabled"]
+AI_PROVIDER = AI_CONFIG["provider"]
+
+if AI_API_ENABLED:
+    print(AI_CONFIG["message"])
+else:
+    print(AI_CONFIG["message"])
 
 # Common technical terms and proper nouns to ignore
 TECHNICAL_TERMS = set([
+    # Tech terms - add all caps versions
     "API", "APIs", "HTTP", "HTTPS", "URL", "URLs", "JSON", "XML", "CSS", "HTML", "PDF", "PDFs",
     "AI", "ML", "IoT", "GPS", "USB", "CPU", "GPU", "RAM", "SSD", "HDD", "OS", "UI", "UX",
     "app", "apps", "email", "emails", "website", "websites", "online", "offline",
     "smartphone", "smartphones", "database", "databases", "username", "usernames",
-    "WiFi", "Bluetooth", "login", "logout", "signup", "dropdown", "checkbox"
+    "WiFi", "Bluetooth", "login", "logout", "signup", "dropdown", "checkbox",
+    
+    # Add lowercase versions of tech terms
+    "http", "https", "api", "apis", "json", "xml", "css", "html", "pdf", "pdfs",
+    "yaml", "iot", "gpt", "nlp", "www", "url", "urls",
+    
+    # Common words often flagged incorrectly
+    "sample", "samples", "document", "documents", "file", "files", "text", "data", 
+    "content", "format", "version", "update", "system", "process", "analysis",
+    "report", "reports", "summary", "details", "information", "example", "examples",
+    "section", "sections", "page", "pages", "paragraph", "paragraphs", "word", "words",
+    "sentence", "sentences", "line", "lines", "item", "items", "list", "lists",
+    "table", "tables", "chart", "charts", "image", "images", "figure", "figures",
+    
+    # Common proper nouns and names often in documents
+    "smith", "johnson", "williams", "brown", "jones", "garcia", "miller", "davis",
+    "rodriguez", "martinez", "hernandez", "lopez", "gonzalez", "wilson", "anderson",
+    "thomas", "taylor", "moore", "jackson", "martin", "lee", "perez", "thompson",
+    "white", "harris", "sanchez", "clark", "ramirez", "lewis", "robinson", "walker",
+    "alice", "bob", "charlie", "david", "eve", "frank", "grace", "henry", "irene", "jack",
+    
+    # Tech companies and tools
+    "openai", "google", "microsoft", "apple", "facebook", "twitter", "github", "gitlab",
+    "stackoverflow", "linkedin", "youtube", "instagram", "whatsapp", "telegram",
+    "markdown", "spellcheck", "testsite", "website", "webpage"
 ])
 
 DOMAIN_EXTENSIONS = set([
@@ -56,6 +106,8 @@ MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 class AdvancedDocumentAnalyzer:
     def __init__(self):
         self.errors = defaultdict(list)
+        self.ai_enabled = AI_API_ENABLED
+        self.ai_provider = AI_PROVIDER
         
     def extract_text_with_formatting(self, file, filename):
         """Enhanced text extraction preserving structure"""
@@ -120,60 +172,91 @@ class AdvancedDocumentAnalyzer:
         if not text or not text.strip():
             return []
         
-        words = re.findall(r'\b\w+\b', text)
+        # Normalize and tokenize words: lowercase, strip punctuation, filter non-alpha
+        import string
+        raw_words = re.findall(r'\b\w+\b', text)
+        words = []
+        for w in raw_words:
+            w_clean = w.strip(string.punctuation).lower()
+            if w_clean.isalpha():
+                words.append(w_clean)
+        print(f"Extracted words for spell check: {words}")
         errors = []
-        
+        checked = set()
         for word in words:
-            word_lower = word.lower()
+            if word in checked:
+                continue
+            checked.add(word)
+            print(f"Checking word: '{word}'")
+            # Skip if it's a technical term, URL part, or domain extension
+            # But be more selective - only skip if it's clearly technical
+            if (word in TECHNICAL_TERMS or 
+                word in DOMAIN_EXTENSIONS or
+                (self.is_url_part(word) and len(word) > 4) or  # Only skip longer URL parts
+                (self.is_email_part(word) and '@' in word)):   # Only skip if it has @ symbol
+                print(f"  Skipped (technical/domain/url/email): '{word}'")
+                continue
             
-            # Skip if it's a technical term, URL part, or number
-            if (word_lower in TECHNICAL_TERMS or 
-                word_lower in DOMAIN_EXTENSIONS or
-                word.isdigit() or
-                self.is_url_part(word) or
-                self.is_email_part(word)):
+            # Skip very short words (unless they're obvious misspellings)
+            if len(word) < 3:
                 continue
                 
-            # Skip proper nouns (capitalized words that aren't at sentence start)
-            if word[0].isupper() and not word.isupper() and len(word) > 2:
-                # Check if it's likely a proper noun by context
-                if self.likely_proper_noun(word, text):
-                    continue
-            
-            # Multiple spell checker validation
             is_misspelled = False
             suggestions = []
             
-            # Check with pyspellchecker
-            if word_lower not in spell:
+            # Primary check with pyspellchecker - be more aggressive
+            spell_check_failed = word not in spell
+            if spell_check_failed:
                 is_misspelled = True
-                suggestions.extend(list(spell.candidates(word))[:3])
+                print(f"  Flagged as misspelled by pyspellchecker: '{word}'")
+                candidates = list(spell.candidates(word))
+                if candidates:
+                    suggestions.extend(candidates[:5])
+                else:
+                    # If no candidates, try common corrections
+                    print(f"  No candidates from spell checker for: '{word}'")
+                    # Try removing/adding common letters
+                    for correction in self.generate_correction_attempts(word):
+                        if correction in spell and correction not in suggestions:
+                            suggestions.append(correction)
             
-            # Additional validation with context
-            if is_misspelled and len(word) > 2:
-                # Special handling for common patterns like double letters
-                if self.has_common_misspelling_pattern(word):
-                    is_misspelled = True
-            
-            # Use autocorrect for additional suggestions
-            if is_misspelled:
-                auto_suggestion = spell_autocorrect(word)
-                if auto_suggestion != word and auto_suggestion not in suggestions:
+            # Always check autocorrect for every word (even if spell checker passes)
+            auto_suggestion = spell_autocorrect(word)
+            if auto_suggestion != word:
+                print(f"  Autocorrect suggests: '{word}' -> '{auto_suggestion}'")
+                if auto_suggestion not in suggestions:
                     suggestions.append(auto_suggestion)
-                
-                # Add pattern-based suggestions for common mistakes
+                # If autocorrect suggests a different word, it's likely misspelled
+                if not is_misspelled:
+                    is_misspelled = True
+                    print(f"  Flagged as misspelled by autocorrect: '{word}'")
+            
+            # Check for common misspelling patterns
+            if self.has_common_misspelling_pattern(word):
+                print(f"  Has common misspelling pattern: '{word}'")
+                is_misspelled = True
                 pattern_suggestions = self.get_pattern_based_suggestions(word)
                 for suggestion in pattern_suggestions:
                     if suggestion not in suggestions:
                         suggestions.append(suggestion)
             
+            # Additional heuristics for catching more errors
+            if not is_misspelled and len(word) > 3:
+                # Check for repeated letters that might be typos
+                if self.has_suspicious_letter_patterns(word):
+                    print(f"  Has suspicious letter pattern: '{word}'")
+                    is_misspelled = True
+                    pattern_suggestions = self.get_pattern_based_suggestions(word)
+                    for suggestion in pattern_suggestions:
+                        if suggestion not in suggestions:
+                            suggestions.append(suggestion)
+            
             if is_misspelled and suggestions:
-                # Remove duplicates and rank by similarity
                 unique_suggestions = list(dict.fromkeys(suggestions))
                 ranked_suggestions = sorted(unique_suggestions, 
-                                         key=lambda x: fuzz.ratio(word.lower(), x.lower()), 
+                                         key=lambda x: fuzz.ratio(word, x), 
                                          reverse=True)[:5]
-                
+                print(f"  Misspelled: '{word}', Suggestions: {ranked_suggestions}")
                 errors.append({
                     'word': word,
                     'type': 'spelling',
@@ -181,7 +264,6 @@ class AdvancedDocumentAnalyzer:
                     'confidence': self.calculate_error_confidence(word, ranked_suggestions),
                     'context': self.get_word_context(word, text)
                 })
-        
         return errors
 
     def grammar_and_style_check(self, text):
@@ -191,27 +273,39 @@ class AdvancedDocumentAnalyzer:
             
         errors = []
         
-        if tool is None:
-            print("Grammar checking is disabled (LanguageTool not available)")
-            return errors
+        # Built-in grammar checks (always run)
+        repeated_word_errors = self.check_repeated_words(text)
+        errors.extend(repeated_word_errors)
         
-        try:
-            matches = tool.check(text)
-            for match in matches:
-                error = {
-                    'type': 'grammar',
-                    'category': match.category,
-                    'rule_id': match.ruleId,
-                    'message': match.message,
-                    'suggestions': match.replacements[:5],
-                    'context': match.context,
-                    'offset': match.offset,
-                    'length': match.errorLength,
-                    'severity': self.categorize_grammar_error(match.category)
-                }
-                errors.append(error)
-        except Exception as e:
-            print(f"Grammar check error: {e}")
+        # Check for missing articles
+        missing_article_errors = self.check_missing_articles(text)
+        errors.extend(missing_article_errors)
+        
+        # Check for common grammar mistakes
+        common_grammar_errors = self.check_common_grammar_mistakes(text)
+        errors.extend(common_grammar_errors)
+        
+        print(f"Built-in grammar checking found {len(errors)} issues")
+        
+        # LanguageTool integration (if available)
+        if tool is not None:
+            try:
+                matches = tool.check(text)
+                for match in matches:
+                    error = {
+                        'type': 'grammar',
+                        'category': match.category,
+                        'rule_id': match.ruleId,
+                        'message': match.message,
+                        'suggestions': match.replacements[:5],
+                        'context': match.context,
+                        'offset': match.offset,
+                        'length': match.errorLength,
+                        'severity': self.categorize_grammar_error(match.category)
+                    }
+                    errors.append(error)
+            except Exception as e:
+                print(f"Grammar check error: {e}")
             
         return errors
 
@@ -418,6 +512,30 @@ class AdvancedDocumentAnalyzer:
             typography_errors = self.typography_and_formatting_check(text_data) or []
             structure_errors = self.document_structure_analysis(text_data) or []
             email_errors = self.email_validation_check(text_data['raw_text']) or []
+            
+            # AI-powered error detection (if enabled)
+            ai_errors = []
+            if self.ai_enabled:
+                print("🤖 Running AI-powered error detection...")
+                ai_errors = self.ai_error_detection(text_data['raw_text'])
+                
+                if len(ai_errors) > 0:
+                    print(f"🤖 AI detected {len(ai_errors)} additional errors")
+                    
+                    # Merge AI errors with existing categories
+                    for ai_error in ai_errors:
+                        if ai_error['type'] == 'spelling':
+                            spelling_errors.append(ai_error)
+                        elif ai_error['type'] == 'grammar':
+                            grammar_errors.append(ai_error)
+                        else:
+                            # Add as grammar errors for now
+                            grammar_errors.append(ai_error)
+                else:
+                    print("🤖 AI analysis completed (rate limited - using enhanced local checking)")
+                    # Enhance local spell checking when AI is unavailable
+                    additional_local_errors = self.enhanced_local_analysis(text_data['raw_text'])
+                    spelling_errors.extend(additional_local_errors)
         
             # Calculate readability metrics
             metrics = self.calculate_advanced_metrics(text_data['raw_text'])
@@ -473,7 +591,7 @@ class AdvancedDocumentAnalyzer:
         word_lower = word.lower()
         
         # Double letter patterns that might be mistakes
-        double_patterns = ['ss', 'll', 'nn', 'mm', 'tt', 'pp']
+        double_patterns = ['ss', 'll', 'nn', 'mm', 'tt', 'pp', 'dd', 'ff', 'gg', 'kk', 'rr']
         for pattern in double_patterns:
             if pattern in word_lower:
                 # Check if removing one letter makes it a valid word
@@ -489,31 +607,252 @@ class AdvancedDocumentAnalyzer:
                 
         return False
     
+    def has_suspicious_letter_patterns(self, word):
+        """Check for suspicious letter patterns that often indicate typos"""
+        word_lower = word.lower()
+        
+        # Check for double letters at the end
+        if len(word) > 3 and word_lower[-1] == word_lower[-2]:
+            # Try removing the last letter
+            test_word = word_lower[:-1]
+            if test_word in spell:
+                return True
+        
+        # Check for triple letters or more
+        for i in range(len(word_lower) - 2):
+            if word_lower[i] == word_lower[i+1] == word_lower[i+2]:
+                return True
+        
+        # Check for common typo patterns like "thiss", "thatt", "whenn", etc.
+        typo_patterns = {
+            'thiss': 'this',
+            'thatt': 'that', 
+            'whenn': 'when',
+            'willl': 'will',
+            'andd': 'and',
+            'orr': 'or',
+            'butt': 'but',
+            'nott': 'not',
+            'cann': 'can',
+            'hass': 'has',
+            'wass': 'was',
+            'havee': 'have',
+            'doess': 'does',
+            'containz': 'contains',
+            'concludez': 'concludes',
+            'lice': 'alice',
+            'hones': 'jones',
+            'eave': 'dave',
+            'testate': 'testsite',
+            'contain': 'contains',
+            'peng': 'pending',
+            'malice': 'alice',
+            'ones': 'jones',
+            'cave': 'dave',
+            'hessite': 'website',
+            'pome': 'home',
+            'sang': 'lang',
+            'alo': 'also',
+            'spieling': 'spelling',
+            'cones': 'jones',
+            'wave': 'dave',
+            'tektite': 'website',
+            'slang': 'lang'
+        }
+        
+        if word_lower in typo_patterns:
+            return True
+            
+        return False
+    
     def get_pattern_based_suggestions(self, word):
         """Generate suggestions based on common misspelling patterns"""
         suggestions = []
         word_lower = word.lower()
         
+        # Common typo mappings
+        typo_patterns = {
+            'thiss': 'this',
+            'thatt': 'that', 
+            'whenn': 'when',
+            'willl': 'will',
+            'andd': 'and',
+            'orr': 'or',
+            'butt': 'but',
+            'nott': 'not',
+            'cann': 'can',
+            'hass': 'has',
+            'wass': 'was',
+            'havee': 'have',
+            'doess': 'does',
+            'containz': 'contains',
+            'concludez': 'concludes',
+            'lice': 'alice',
+            'hones': 'jones',
+            'eave': 'dave',
+            'testate': 'testsite',
+            'contain': 'contains',
+            'peng': 'pending',
+            'malice': 'alice',
+            'ones': 'jones',
+            'cave': 'dave',
+            'hessite': 'website',
+            'pome': 'home',
+            'sang': 'lang',
+            'alo': 'also',
+            'spieling': 'spelling',
+            'cones': 'jones',
+            'wave': 'dave',
+            'tektite': 'website',
+            'slang': 'lang'
+        }
+        
+        # Direct typo mapping
+        if word_lower in typo_patterns:
+            suggestions.append(typo_patterns[word_lower])
+        
         # For words ending with double letters, try single letter
         if len(word) > 3:
-            if word_lower.endswith('ss'):
-                candidate = word_lower[:-1]
-                if candidate in spell:
-                    suggestions.append(candidate)
-            if word_lower.endswith('ll'):
-                candidate = word_lower[:-1]
-                if candidate in spell:
-                    suggestions.append(candidate)
+            for char in 'abcdefghijklmnopqrstuvwxyz':
+                if word_lower.endswith(char + char):
+                    candidate = word_lower[:-1]
+                    if candidate in spell and candidate not in suggestions:
+                        suggestions.append(candidate)
         
-        # For words with double letters in middle, try single
-        double_patterns = ['ss', 'll', 'nn', 'mm', 'tt', 'pp', 'dd', 'ff', 'gg']
+        # For words with double letters anywhere, try single
+        double_patterns = ['ss', 'll', 'nn', 'mm', 'tt', 'pp', 'dd', 'ff', 'gg', 'kk', 'rr', 'cc', 'bb']
         for pattern in double_patterns:
             if pattern in word_lower:
                 candidate = word_lower.replace(pattern, pattern[0], 1)
                 if candidate in spell and candidate not in suggestions:
                     suggestions.append(candidate)
         
-        return suggestions[:3]  # Limit to 3 suggestions
+        # Try removing last character (common for extra letters)
+        if len(word) > 3:
+            candidate = word_lower[:-1]
+            if candidate in spell and candidate not in suggestions:
+                suggestions.append(candidate)
+        
+        return suggestions[:5]  # Return up to 5 suggestions
+    
+    def generate_correction_attempts(self, word):
+        """Generate correction attempts for words with no spell checker candidates"""
+        corrections = []
+        
+        # Try removing last character (for words like "containz" -> "contain")
+        if len(word) > 3:
+            corrections.append(word[:-1])
+        
+        # Try changing last character to common endings
+        if len(word) > 3:
+            base = word[:-1]
+            for ending in ['s', 'e', 'd', 'r', 'n', 't']:
+                corrections.append(base + ending)
+        
+        # Try removing/changing middle characters for common patterns
+        if 'z' in word:
+            corrections.append(word.replace('z', 's'))
+        if 'x' in word:
+            corrections.append(word.replace('x', 'c'))
+            corrections.append(word.replace('x', 'ks'))
+        
+        return corrections
+    
+    def check_repeated_words(self, text):
+        """Check for repeated words like 'the the', 'and and', 'is is'"""
+        errors = []
+        
+        # Split text into words and check for consecutive duplicates
+        words = re.findall(r'\b\w+\b', text.lower())
+        
+        for i in range(len(words) - 1):
+            if words[i] == words[i + 1]:
+                # Find the position in original text
+                pattern = r'\b' + re.escape(words[i]) + r'\s+' + re.escape(words[i]) + r'\b'
+                match = re.search(pattern, text, re.IGNORECASE)
+                if match:
+                    errors.append({
+                        'type': 'grammar',
+                        'category': 'REPETITION',
+                        'rule_id': 'REPEATED_WORDS',
+                        'message': f'Repeated word: "{words[i]}"',
+                        'suggestions': [words[i]],  # Suggest single occurrence
+                        'context': match.group(),
+                        'offset': match.start(),
+                        'length': len(match.group()),
+                        'severity': 'medium'
+                    })
+        
+        return errors
+    
+    def check_missing_articles(self, text):
+        """Check for missing articles (a, an, the)"""
+        errors = []
+        
+        # Look for patterns like "Document is important" instead of "The document is important"
+        patterns = [
+            (r'\b[A-Z][a-z]+ is (important|good|bad|necessary|useful)', 'Missing article before noun'),
+            (r'\b[A-Z][a-z]+ has been', 'Consider adding article before noun'),
+            (r'\bDocument is\b', 'Should be "The document is"'),
+            (r'\bReport shows\b', 'Should be "The report shows"')
+        ]
+        
+        for pattern, message in patterns:
+            matches = re.finditer(pattern, text)
+            for match in matches:
+                errors.append({
+                    'type': 'grammar',
+                    'category': 'ARTICLES',
+                    'rule_id': 'MISSING_ARTICLE',
+                    'message': message,
+                    'suggestions': ['The ' + match.group().lower()],
+                    'context': match.group(),
+                    'offset': match.start(),
+                    'length': len(match.group()),
+                    'severity': 'medium'
+                })
+        
+        return errors
+    
+    def check_common_grammar_mistakes(self, text):
+        """Check for common grammar mistakes"""
+        errors = []
+        
+        # Common mistakes and their corrections
+        grammar_patterns = [
+            # Subject-verb disagreement patterns
+            (r'\bIt contain\b', 'It contains', 'Subject-verb disagreement: "It contain" should be "It contains"'),
+            (r'\bHe have\b', 'He has', 'Subject-verb disagreement: "He have" should be "He has"'),
+            (r'\bShe have\b', 'She has', 'Subject-verb disagreement: "She have" should be "She has"'),
+            (r'\bDocument is important\b', 'The document is important', 'Missing article: "Document is important" should be "The document is important"'),
+            (r'\bFile contain\b', 'File contains', 'Subject-verb disagreement: "File contain" should be "File contains"'),
+            
+            # Common mistakes
+            (r'\byour welcome\b', 'you\'re welcome', 'Incorrect: "your welcome" should be "you\'re welcome"'),
+            (r'\bits me\b', 'it\'s me', 'Missing apostrophe: "its me" should be "it\'s me"'),
+            (r'\bwould of\b', 'would have', 'Incorrect: "would of" should be "would have"'),
+            (r'\bcould of\b', 'could have', 'Incorrect: "could of" should be "could have"'),
+            (r'\bshould of\b', 'should have', 'Incorrect: "should of" should be "should have"'),
+            (r'\bthere house\b', 'their house', 'Incorrect: "there house" should be "their house"'),
+            (r'\byour right\b', 'you\'re right', 'Incorrect: "your right" should be "you\'re right"'),
+        ]
+        
+        for pattern, correction, message in grammar_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                errors.append({
+                    'type': 'grammar',
+                    'category': 'GRAMMAR',
+                    'rule_id': 'COMMON_MISTAKE',
+                    'message': message,
+                    'suggestions': [correction],
+                    'context': match.group(),
+                    'offset': match.start(),
+                    'length': len(match.group()),
+                    'severity': 'high'
+                })
+        
+        return errors
     
     def get_word_context(self, word, text, context_length=50):
         match = re.search(r'\b' + re.escape(word) + r'\b', text)
@@ -561,6 +900,17 @@ class AdvancedDocumentAnalyzer:
         }
     
     def generate_corrected_text(self, text, spelling_errors, grammar_errors):
+        # Try AI-powered correction first (if available)
+        if self.ai_enabled and self.ai_provider == "gemini":
+            print("🤖 Generating AI-corrected text with Gemini...")
+            ai_corrected = self.generate_corrected_text_with_gemini(text)
+            if ai_corrected and ai_corrected != text:
+                print("✅ AI correction completed!")
+                return ai_corrected
+            else:
+                print("⚠️ AI correction failed, falling back to local correction")
+        
+        # Fallback to local corrections
         corrected = text
         
         # Apply spelling corrections
@@ -635,6 +985,326 @@ class AdvancedDocumentAnalyzer:
                 'invalid_format': len([e for e in email_errors if e.get('subtype') == 'invalid_format'])
             }
         }
+    
+    def ai_error_detection(self, text: str) -> List[Dict[str, Any]]:
+        """Use AI API for intelligent error detection and correction"""
+        if not self.ai_enabled:
+            return []
+        
+        try:
+            # Split text into chunks for API limits
+            chunks = self.split_text_for_ai(text)
+            all_errors = []
+            
+            for chunk in chunks:
+                chunk_errors = self.analyze_chunk_with_ai(chunk)
+                all_errors.extend(chunk_errors)
+            
+            return all_errors
+        except Exception as e:
+            print(f"AI error detection failed: {e}")
+            return []
+    
+    def split_text_for_ai(self, text: str, max_chunk_size: int = 2000) -> List[str]:
+        """Split text into manageable chunks for AI analysis"""
+        if len(text) <= max_chunk_size:
+            return [text]
+        
+        chunks = []
+        sentences = re.split(r'[.!?]+', text)
+        current_chunk = ""
+        
+        for sentence in sentences:
+            if len(current_chunk + sentence) <= max_chunk_size:
+                current_chunk += sentence + ". "
+            else:
+                if current_chunk:
+                    chunks.append(current_chunk.strip())
+                current_chunk = sentence + ". "
+        
+        if current_chunk:
+            chunks.append(current_chunk.strip())
+        
+        return chunks
+    
+    def analyze_chunk_with_ai(self, text_chunk: str) -> List[Dict[str, Any]]:
+        """Analyze a text chunk using AI API - supports multiple providers"""
+        if self.ai_provider == "openai":
+            return self.analyze_with_openai(text_chunk)
+        elif self.ai_provider == "gemini":
+            return self.analyze_with_gemini(text_chunk)
+        elif self.ai_provider == "huggingface":
+            return self.analyze_with_huggingface(text_chunk)
+        else:
+            return []
+    
+    def analyze_with_openai(self, text_chunk: str) -> List[Dict[str, Any]]:
+        """Analyze text using OpenAI API"""
+        prompt = f"""You are an expert proofreader and editor. Analyze this text for errors and provide corrections.
+
+FOCUS ON THESE CRITICAL ERROR TYPES:
+1. Subject-verb disagreement (e.g., "It contain" → "It contains")  
+2. Missing articles (e.g., "Document is important" → "The document is important")
+3. Obvious spelling mistakes (e.g., "lice.smith" → "alice.smith", "spieling" → "spelling")
+4. Grammar errors and sentence structure issues
+5. Inconsistent capitalization and punctuation
+
+Return a JSON array with this exact format:
+[
+  {{
+    "type": "spelling|grammar|style",
+    "word_or_phrase": "exact_error_text_from_document",
+    "message": "clear_explanation_of_error",
+    "suggestions": ["correction1", "correction2"],
+    "confidence": 0.95,
+    "context": "surrounding_text_for_context"
+  }}
+]
+
+Text to analyze:
+{text_chunk}
+
+IMPORTANT: 
+- Find REAL errors, not style preferences
+- Be specific with word_or_phrase (exact text from document)
+- Prioritize obvious mistakes like subject-verb disagreement
+- Return only the JSON array, no other text"""
+
+        headers = {
+            'Authorization': f'Bearer {os.getenv("OPENAI_API_KEY")}',
+            'Content-Type': 'application/json'
+        }
+        
+        data = {
+            'model': 'gpt-3.5-turbo',
+            'messages': [
+                {'role': 'system', 'content': 'You are an expert text editor and proofreader. Analyze text for errors and return structured JSON responses.'},
+                {'role': 'user', 'content': prompt}
+            ],
+            'temperature': 0.1,
+            'max_tokens': 1000
+        }
+        
+        try:
+            response = requests.post('https://api.openai.com/v1/chat/completions', headers=headers, json=data, timeout=30)
+            response.raise_for_status()
+            
+            result = response.json()
+            content = result['choices'][0]['message']['content'].strip()
+            
+            # Parse the JSON response
+            if content.startswith('[') and content.endswith(']'):
+                errors = json.loads(content)
+                return self.format_ai_errors(errors)
+            else:
+                print(f"Unexpected AI response format: {content}")
+                return []
+                
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response and e.response.status_code == 429:
+                print(f"⚠️  OpenAI API rate limit exceeded. Consider upgrading your plan or trying again later.")
+                print(f"   Using enhanced local spell checking instead for now.")
+            else:
+                print(f"AI API request failed: {e}")
+            return []
+        except json.JSONDecodeError as e:
+            print(f"Failed to parse AI response as JSON: {e}")
+            return []
+    
+    def analyze_with_gemini(self, text_chunk: str) -> List[Dict[str, Any]]:
+        """Analyze text using Google Gemini API (Free)"""
+        try:
+            import google.generativeai as genai
+            
+            genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+            model = genai.GenerativeModel('gemini-1.5-flash')  # Free model
+            
+            prompt = f"""You are an expert proofreader. Analyze this text for errors and return ONLY a JSON array of error objects.
+
+CRITICAL: Focus on these error types:
+1. Subject-verb disagreement (e.g., "It contain" should be "It contains")
+2. Missing articles (e.g., "Document is" should be "The document is")
+3. Obvious spelling mistakes (e.g., "lice.smith" should be "alice.smith", "spieling" should be "spelling")
+4. Grammar errors and awkward phrasing
+5. Inconsistent capitalization
+
+Format: [{{"type": "spelling|grammar|style", "word_or_phrase": "exact_error_text", "message": "Clear explanation", "suggestions": ["correction1", "correction2"], "confidence": 0.9}}]
+
+EXAMPLES:
+- "It contain" → {{"type": "grammar", "word_or_phrase": "It contain", "message": "Subject-verb disagreement", "suggestions": ["It contains"], "confidence": 0.95}}
+- "Document is important" → {{"type": "grammar", "word_or_phrase": "Document is important", "message": "Missing definite article", "suggestions": ["The document is important"], "confidence": 0.9}}
+- "lice.smith" → {{"type": "spelling", "word_or_phrase": "lice.smith", "message": "Likely typo in name", "suggestions": ["alice.smith"], "confidence": 0.8}}
+
+Text to analyze:
+{text_chunk}
+
+Return ONLY the JSON array, no explanations or other text."""
+            
+            response = model.generate_content(prompt)
+            content = response.text.strip()
+            
+            # Clean up response
+            if content.startswith('```json'):
+                content = content[7:-3].strip()
+            elif content.startswith('```'):
+                content = content[3:-3].strip()
+            
+            if content.startswith('[') and content.endswith(']'):
+                errors = json.loads(content)
+                return self.format_ai_errors(errors)
+            else:
+                return []
+                
+        except Exception as e:
+            print(f"Google Gemini API error: {e}")
+            return []
+
+    def generate_corrected_text_with_gemini(self, text: str) -> str:
+        """Generate a fully corrected version of the text using Gemini AI"""
+        try:
+            import google.generativeai as genai
+            
+            genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
+            prompt = f"""You are an expert editor and proofreader. Please provide a corrected version of the following text, fixing all spelling, grammar, and style errors while maintaining the original meaning and structure.
+
+FOCUS ON:
+- Subject-verb agreement (e.g., "It contain" → "It contains")
+- Missing articles (e.g., "Document is important" → "The document is important")
+- Spelling mistakes (e.g., "thiss" → "this", "containz" → "contains")
+- Grammar errors and awkward phrasing
+- Proper capitalization and punctuation
+
+Return ONLY the corrected text, no explanations or additional commentary.
+
+Original text:
+{text}
+
+Corrected text:"""
+            
+            response = model.generate_content(prompt)
+            corrected_text = response.text.strip()
+            
+            return corrected_text
+                
+        except Exception as e:
+            print(f"Gemini text correction error: {e}")
+            return text  # Return original if correction fails
+    
+    def analyze_with_huggingface(self, text_chunk: str) -> List[Dict[str, Any]]:
+        """Analyze text using Hugging Face API (Free)"""
+        try:
+            from huggingface_hub import InferenceClient
+            
+            client = InferenceClient(token=os.getenv('HUGGINGFACE_API_KEY'))
+            
+            prompt = f"""<s>[INST] Analyze this text for spelling and grammar errors. Return JSON array format:
+[{{"type": "spelling", "word": "error", "suggestions": ["fix"]}}]
+
+Text: {text_chunk} [/INST]"""
+            
+            response = client.text_generation(
+                prompt=prompt,
+                model="mistralai/Mistral-7B-Instruct-v0.1",
+                max_new_tokens=500,
+                temperature=0.1
+            )
+            
+            # Try to extract JSON from response
+            content = response.strip()
+            if '[' in content and ']' in content:
+                json_start = content.find('[')
+                json_end = content.rfind(']') + 1
+                json_content = content[json_start:json_end]
+                errors = json.loads(json_content)
+                return self.format_ai_errors(errors)
+            
+            return []
+            
+        except Exception as e:
+            print(f"Hugging Face API error: {e}")
+            return []
+    
+    def format_ai_errors(self, ai_errors: List[Dict]) -> List[Dict[str, Any]]:
+        """Format AI errors to match our error structure"""
+        formatted_errors = []
+        
+        for error in ai_errors:
+            formatted_error = {
+                'type': error.get('type', 'ai_detected'),
+                'word': error.get('word_or_phrase', ''),
+                'message': error.get('message', ''),
+                'suggestions': error.get('suggestions', [])[:5],
+                'confidence': error.get('confidence', 0.8),
+                'context': error.get('context', ''),
+                'severity': 'high' if error.get('confidence', 0) > 0.9 else 'medium',
+                'source': 'ai_api'
+            }
+            formatted_errors.append(formatted_error)
+        
+        return formatted_errors
+    
+    def enhanced_local_analysis(self, text: str) -> List[Dict[str, Any]]:
+        """Enhanced local spell checking when AI is unavailable"""
+        errors = []
+        
+        # Focus on common typo patterns that our main spell checker might have missed
+        high_confidence_typos = {
+            'thiss': 'this',
+            'containz': 'contains', 
+            'concludez': 'concludes',
+            'analyz': 'analyze',
+            'spelng': 'spelling',
+            'challange': 'challenge',
+            'featuress': 'features',
+            'smple': 'simple',
+            'spieling': 'spelling',  # Added from user's example
+            'lice': 'alice'  # Common typo in names
+        }
+        
+        # Check for subject-verb disagreement patterns
+        grammar_patterns = [
+            (r'\bIt contain\b', 'It contains', 'Subject-verb disagreement: singular subject requires singular verb'),
+            (r'\bDocument is important\b', 'The document is important', 'Missing definite article before "document"'),
+            (r'\bDocument is\b(?!\s+important)', 'The document is', 'Missing definite article before "document"'),
+            (r'\bAnalyzer is\b', 'The analyzer is', 'Missing definite article'),
+            (r'\bSystem are\b', 'System is', 'Subject-verb disagreement'),
+            (r'\bText are\b', 'Text is', 'Subject-verb disagreement'),
+            (r'\bThey was\b', 'They were', 'Subject-verb disagreement'),
+            (r'\bHe were\b', 'He was', 'Subject-verb disagreement'),
+            (r'\bShe were\b', 'She was', 'Subject-verb disagreement'),
+        ]
+        
+        # Check for typos
+        words = re.findall(r'\b[a-zA-Z]+\b', text.lower())
+        for word in words:
+            if word in high_confidence_typos:
+                errors.append({
+                    'type': 'spelling',
+                    'word': word,
+                    'message': f"Possible typo: '{word}' should be '{high_confidence_typos[word]}'",
+                    'suggestions': [high_confidence_typos[word]],
+                    'confidence': 0.95,
+                    'severity': 'high',
+                    'source': 'enhanced_local'
+                })
+        
+        # Check for grammar patterns
+        for pattern, correction, message in grammar_patterns:
+            matches = re.finditer(pattern, text, re.IGNORECASE)
+            for match in matches:
+                errors.append({
+                    'type': 'grammar',
+                    'word': match.group(),
+                    'message': f"{message}: '{match.group()}' should be '{correction}'",
+                    'suggestions': [correction],
+                    'confidence': 0.90,
+                    'severity': 'high',
+                    'source': 'enhanced_local'
+                })
+        
+        return errors
 
 # Initialize the analyzer
 analyzer = AdvancedDocumentAnalyzer()

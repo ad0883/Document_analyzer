@@ -1,1 +1,67 @@
+# 🚨 Security & Environment Files
+.env
+*.env
+.env.local
+.env.production
+.env.development
+
+# Python Virtual Environment
 /venv
+venv/
+.venv/
+env/
+
+# Python Cache & Compiled Files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs & Temporary Files
+*.log
+logs/
+temp/
+tmp/
+uploads/
+
+# Build & Distribution Files
+build/
+dist/
+*.egg-info/
+
+# Documentation Build
+docs/_build/
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints
+
+# pytest Cache
+.pytest_cache/
+
+# Coverage Reports
+htmlcov/
+.coverage
+.coverage.*
+
+# Local Test Files (keep your test files private)
+test_*.txt
+sample_*.pdf
+private_*.*

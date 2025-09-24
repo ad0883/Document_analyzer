@@ -11,3 +11,7 @@ fuzzywuzzy==0.18.0
 python-Levenshtein==0.21.1
 autocorrect==2.6.1
 gunicorn==21.2.0
+openai==1.40.0
+python-dotenv==1.0.0
+google-generativeai==0.7.2
+huggingface-hub==0.24.5
