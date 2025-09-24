@@ -16,6 +16,9 @@ import os
 from typing import List, Dict, Any
 import openai
 from dotenv import load_dotenv
+import pytesseract
+from pdf2image import convert_from_bytes
+from PIL import Image
 
 # Load environment variables
 load_dotenv()
@@ -109,6 +112,29 @@ class AdvancedDocumentAnalyzer:
         self.ai_enabled = AI_API_ENABLED
         self.ai_provider = AI_PROVIDER
         
+    def extract_text_with_ocr(self, pdf_bytes):
+        """Extract text from image-based PDF using OCR"""
+        try:
+            # Convert PDF pages to images
+            images = convert_from_bytes(pdf_bytes)
+            extracted_text = ""
+            
+            for i, image in enumerate(images):
+                try:
+                    # Use pytesseract to extract text from each page
+                    page_text = pytesseract.image_to_string(image, lang='eng')
+                    if page_text.strip():
+                        extracted_text += f"\n--- Page {i+1} ---\n"
+                        extracted_text += page_text + "\n"
+                except Exception as e:
+                    print(f"OCR failed for page {i+1}: {str(e)}")
+                    continue
+            
+            return extracted_text.strip()
+        except Exception as e:
+            print(f"OCR extraction failed: {str(e)}")
+            return ""
+
     def extract_text_with_formatting(self, file, filename):
         """Enhanced text extraction preserving structure"""
         text_data = {
@@ -494,17 +520,35 @@ class AdvancedDocumentAnalyzer:
             text_data = self.extract_text_with_formatting(file, filename)
             
             if not text_data.get('raw_text', '').strip():
-                # Check if PDF and if any page has images (indicating scanned PDF)
+                # Check if PDF and try OCR for image-based content
                 if filename.endswith('.pdf'):
                     try:
                         file.seek(0)
+                        pdf_bytes = file.read()
+                        
+                        # First check if it has images (likely scanned PDF)
+                        file.seek(0)
                         with pdfplumber.open(file) as pdf:
                             has_images = any(len(page.images) > 0 for page in pdf.pages)
+                        
                         if has_images:
-                            return {'error': 'No extractable text found. This PDF appears to be image-based (scanned). Try using OCR or upload a text-based PDF.'}
-                    except Exception:
-                        pass
-                return {'error': 'No readable text found in document'}
+                            # Try OCR extraction
+                            ocr_text = self.extract_text_with_ocr(pdf_bytes)
+                            if ocr_text:
+                                text_data = {
+                                    'raw_text': ocr_text,
+                                    'pages': [ocr_text],  # Treat OCR result as single block
+                                    'paragraphs': ocr_text.split('\n\n'),
+                                    'source': 'OCR'
+                                }
+                            else:
+                                return {'error': 'Failed to extract text using OCR. The image quality might be too poor or the text is not readable.'}
+                        else:
+                            return {'error': 'No readable text found in PDF and no images detected for OCR processing.'}
+                    except Exception as e:
+                        return {'error': f'Failed to process PDF: {str(e)}'}
+                else:
+                    return {'error': 'No readable text found in document'}
             
             # Perform all analyses
             spelling_errors = self.advanced_spell_check(text_data['raw_text']) or []
