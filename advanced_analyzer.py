@@ -236,9 +236,9 @@ class AdvancedDocumentAnalyzer:
             if spell_check_failed:
                 is_misspelled = True
                 print(f"  Flagged as misspelled by pyspellchecker: '{word}'")
-                candidates = list(spell.candidates(word))
+                candidates = spell.candidates(word)
                 if candidates:
-                    suggestions.extend(candidates[:5])
+                    suggestions.extend(list(candidates)[:5])
                 else:
                     # If no candidates, try common corrections
                     print(f"  No candidates from spell checker for: '{word}'")
