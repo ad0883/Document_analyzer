@@ -92,4 +92,14 @@ Visit the application and start analyzing your documents instantly - no setup re
 
 ---
 
-*Built with ❤️ using AI technology to help you write better.*
+## 👨‍💻 **About the Developer**
+
+**Alok Dwivedi** - Passionate about AI and helping people improve their writing through technology.
+
+## 🔗 **Live Demo**
+
+Try the live application: **https://document-analyzer-whi0.onrender.com**
+
+---
+
+*Built with ❤️ by Alok Dwivedi using AI technology to help you write better.*
