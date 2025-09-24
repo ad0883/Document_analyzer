@@ -16,6 +16,7 @@ import os
 from typing import List, Dict, Any
 import openai
 from dotenv import load_dotenv
+import google.generativeai as genai
 import pytesseract
 from pdf2image import convert_from_bytes
 from PIL import Image
